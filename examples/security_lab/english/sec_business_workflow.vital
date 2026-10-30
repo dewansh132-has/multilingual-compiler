@@ -1,0 +1,63 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo D: Complex Business Workflow with Multiple Defects
+// Language: English
+// Difficulty: Advanced
+// Seeded Defects: Missing Delimiter (Syntax), Business Logic Flaw (CWE-840), State Bypass (CWE-285)
+
+let tax_rate = 18
+let merchant_id = 9021
+
+function validate_coupon_code(coupon_code) {
+    if (coupon_code == "VIP_DISCOUNT_50") {
+        return 50
+    } elif (coupon_code == "SPRING_SAVINGS_20") {
+        return 20
+    } else {
+        return 0
+    }
+}
+
+function calculate_item_subtotal(unit_price, item_quantity) {
+    // VULNERABILITY 1: Business Logic Flaw — Missing negative quantity validation
+    // An attacker can pass item_quantity = -5 to produce negative subtotal and reverse billing!
+    let raw_subtotal = unit_price * item_quantity
+    print("Calculated item subtotal:")
+    print(raw_subtotal)
+    return raw_subtotal
+}
+
+function process_order_items(base_price, quantity, coupon_code) {
+    let subtotal = calculate_item_subtotal(base_price, quantity)
+    let discount_percent = validate_coupon_code(coupon_code)
+
+    // Logic Flaw: Discount applied before checking customer tier authorization
+    let discount_amount = (subtotal * discount_percent) / 100
+    let discounted_subtotal = subtotal - discount_amount
+
+    // Calculate tax
+    let total_tax = (discounted_subtotal * tax_rate) / 100
+    let final_invoice_amount = discounted_subtotal + total_tax
+
+    print("Subtotal after discount:")
+    print(discounted_subtotal)
+    print("Final invoice amount:")
+    print(final_invoice_amount)
+
+    // VULNERABILITY 2: Syntax Error — Missing closing brace on workflow verification block
+    // Notice: Missing closing brace '}' right here causes a delimiter imbalance
+    if (final_invoice_amount < 0) {
+        print("Alert: Negative invoice detected! Potential refund exploit.")
+        return 0
+
+    return final_invoice_amount
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: E-Commerce Order Workflow ===")
+let unit_cost = 100
+let order_qty = 2
+let coupon = "VIP_DISCOUNT_50"
+
+let final_order = process_order_items(unit_cost, order_qty, coupon)
+print("Order finalized with status:")
+print(final_order)

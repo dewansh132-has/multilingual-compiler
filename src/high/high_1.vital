@@ -1,0 +1,13 @@
+// Heavy ALU Stress: Massive Factorial Calculation
+let number = 500
+let factorial = 1
+
+print("--- Deep Factorial Stress Test ---")
+print("Target:")
+print(number)
+
+while (number > 0) {
+    let factorial = factorial * number
+    let number = number - 1
+}
+print("Calculation Complete. Engine survived.")

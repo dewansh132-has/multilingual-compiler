@@ -1,0 +1,19 @@
+వ్యాఖ్య Bank Loan Eligibility Checker
+అనుకో వయస్సు = 28
+అనుకో జీతం = 50000
+అనుకో క్రెడిట్_స్కోర్ = 750
+
+రాయి("--- Loan Application Status ---")
+
+ఒకవేళ (వయస్సు < 21) {
+    రాయి("Rejected: Age too low.")
+}
+లేదా_ఒకవేళ (క్రెడిట్_స్కోర్ < 600) {
+    రాయి("Rejected: Poor Credit.")
+}
+లేదా_ఒకవేళ (జీతం >= 40000 మరియు క్రెడిట్_స్కోర్ >= 700) {
+    రాయి("Approved: Premium Loan Tier.")
+}
+కాకపోతే {
+    రాయి("Approved: Standard Loan Tier.")
+}

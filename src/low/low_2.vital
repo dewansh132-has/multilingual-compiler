@@ -1,0 +1,22 @@
+// Advanced Leap Year Algorithm
+let year = 2024
+let is_leap = 0
+
+print("Checking Leap Year for:")
+print(year)
+
+if (year % 400 == 0) {
+    let is_leap = 1
+}
+elif (year % 100 == 0) {
+    let is_leap = 0
+}
+elif (year % 4 == 0) {
+    let is_leap = 1
+}
+else {
+    let is_leap = 0
+}
+
+print("Leap Year Status (1=Yes, 0=No):")
+print(is_leap)

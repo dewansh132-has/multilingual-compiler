@@ -1,0 +1,68 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo B: Unsafe Data Processing & Configuration
+// Language: English
+// Difficulty: Intermediate
+// Seeded Defects: Hardcoded Secret (CWE-798), Info Disclosure (CWE-200), Missing Bounds (CWE-129)
+
+// VULNERABILITY 1: Hardcoded Master Secret Key in source code
+let admin_secret_key = "sk_live_sec_prod_9948271630_super_admin"
+let debug_mode_enabled = 1
+
+function read_config_record(record_index, user_role) {
+    print("Reading configuration record index:")
+    print(record_index)
+
+    // VULNERABILITY 2: Missing upper boundary check on user-supplied index
+    // Valid record indices are 0 to 4. Accepts arbitrary unchecked indices.
+    if (record_index < 0) {
+        print("Error: Negative index rejected.")
+        return 0
+    }
+
+    // Logic Flaw: Off-by-one check allows out-of-range index 5
+    if (record_index > 5) {
+        print("Error: Index exceeds max allocation buffer.")
+        return 0
+    }
+
+    // Simulated configuration lookup
+    let record_value = 100 + (record_index * 25)
+
+    // VULNERABILITY 3: Information Disclosure / Sensitive Data Exposure
+    // Verbose debug logging leaks administrative secret keys into output console
+    if (debug_mode_enabled == 1) {
+        print("DEBUG LOG [INTERNAL]: Active Master Secret Key:")
+        print(admin_secret_key)
+        print("DEBUG LOG [INTERNAL]: User Role Context:")
+        print(user_role)
+    }
+
+    return record_value
+}
+
+function parse_user_payload(raw_count, max_allowed) {
+    let accumulator = 0
+    let counter = 0
+
+    // Logic defect: loop uses <= instead of < causing off-by-one extra cycle
+    while (counter <= raw_count) {
+        accumulator = accumulator + counter
+        counter = counter + 1
+    }
+
+    print("Calculated payload checksum:")
+    print(accumulator)
+    return accumulator
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: Config & Data Processor ===")
+let requested_record = 5
+let role = "guest_operator"
+let config_val = read_config_record(requested_record, role)
+print("Returned configuration value:")
+print(config_val)
+
+let payload_sum = parse_user_payload(5, 5)
+print("Checksum result:")
+print(payload_sum)

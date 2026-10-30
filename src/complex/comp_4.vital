@@ -1,0 +1,18 @@
+टिप्पणी Alternating Addition/Subtraction Series
+అనుకో కౌంటర్ = 1
+मानो total = 0
+let limit = 100
+
+print("Starting Alternating Multilingual Series...")
+
+ఉన్నంతవరకు (కౌంటర్ <= limit) {
+    अगर (కౌంటర్ % 2 == 0) {
+        मानो total = total - కౌంటర్
+    }
+    अन्यथा {
+        అనుకో total = total + కౌంటర్
+    }
+    let కౌంటర్ = కౌంటర్ + 1
+}
+రాయి("Final Series Total:")
+print(total)

@@ -1,0 +1,23 @@
+// Corporate Tax Bracket Calculator
+let income = 750000
+let tax_rate = 0
+
+print("Calculating Tax Bracket for Income:")
+print(income)
+
+if (income <= 250000) {
+    let tax_rate = 0
+    print("Tax: 0%")
+}
+elif (income <= 500000) {
+    let tax_rate = 5
+    print("Tax: 5%")
+}
+elif (income <= 1000000) {
+    let tax_rate = 20
+    print("Tax: 20%")
+}
+else {
+    let tax_rate = 30
+    print("Tax: 30%")
+}

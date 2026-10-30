@@ -1,0 +1,13 @@
+टिप्पणी_गर Heavy ALU Stress: Massive Factorial Calculation
+मान number = 500
+मान factorial = 1
+
+छाप("--- Deep Factorial Stress Test ---")
+छाप("Target:")
+छाप(number)
+
+जबसम्म (number > 0) {
+    मान factorial = factorial * number
+    मान number = number - 1
+}
+छाप("Calculation Complete. Engine survived.")

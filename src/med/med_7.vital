@@ -1,0 +1,14 @@
+टीप Find the first valid divisor
+घ्या target = 87
+घ्या divider = 2
+
+लिहा("Searching for first divisor of 87...")
+
+जोपर्यंत (divider < target) {
+    जर (target % divider == 0) {
+        लिहा("First divisor found!")
+        लिहा(divider)
+        बंद_करा
+    }
+    घ्या divider = divider जोडा 1
+}

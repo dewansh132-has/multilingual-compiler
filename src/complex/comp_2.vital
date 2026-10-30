@@ -1,0 +1,16 @@
+// Multilingual Warehouse Inventory Simulation
+let stock = 100
+मानो order_size = 15
+
+लिखो("Processing Warehouse Orders...")
+
+ఉన్నంతవరకు (stock > 0) {
+    अगर (stock < order_size) {
+        రాయి("Warning: Insufficient stock for next order.")
+        ఆపు
+    }
+    
+    let stock = stock - order_size
+    लिखो("Order fulfilled. Remaining:")
+    print(stock)
+}

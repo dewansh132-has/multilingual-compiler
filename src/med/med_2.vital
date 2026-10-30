@@ -1,0 +1,14 @@
+// Find the first valid divisor
+let target = 87
+let divider = 2
+
+print("Searching for first divisor of 87...")
+
+while (divider < target) {
+    if (target % divider == 0) {
+        print("First divisor found!")
+        print(divider)
+        break
+    }
+    let divider = divider + 1
+}

@@ -1,0 +1,18 @@
+टिप्पणी Climate Control System
+मानो तापमान = 38
+मानो आर्द्रता = 80
+
+लिखो("Weather Status Check:")
+
+अगर (तापमान > 40) {
+    लिखो("Warning: Extreme Heat Wave")
+}
+या_अगर (तापमान > 35 तथा आर्द्रता > 75) {
+    लिखो("Warning: High Heat Index, AC required")
+}
+या_अगर (तापमान < 15) {
+    लिखो("Status: Cold, activate heater")
+}
+अन्यथा {
+    लिखो("Status: Normal Conditions")
+}

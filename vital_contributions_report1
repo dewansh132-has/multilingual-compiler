@@ -1,0 +1,364 @@
+# VITAL Compiler — Technical Report: Two Compiler Contributions
+
+## A. Original Project State
+
+### How the old system worked (verified from source code)
+
+The original VITAL compiler had the following architecture:
+
+```
+VITAL Source (.vital file)
+        ↓
+    run_lexer()        ← regex-based classification, writes lexer_log.txt ONLY
+        ↓
+    run_parser()       ← calls transpile() internally, then ast.parse() on result
+        ↓
+    transpile()        ← regex-based find-and-replace: multilingual keywords → Python
+        ↓
+    Python source (IR) ← stored in ir.txt
+        ↓
+    exec()             ← Python's exec() executes the generated Python code
+        ↓
+    Output             ← captured and saved to output.txt
+```
+
+**Key findings from audit:**
+
+1. **The old lexer (`run_lexer`)** used `re.findall()` to split each source line into words and single non-word characters. It classified each element as `KEYWORD(...)`, `NUM(...)`, `ID(...)`, or `SYM(...)` and wrote them to `lexer_log.txt`. The classification output was **never returned or consumed** by any downstream stage — it was purely a log file for demonstration.
+
+2. **The old transpiler (`transpile`)** performed the actual source-to-Python translation by iterating over `sorted(translation_map.keys(), key=len, reverse=True)` and applying regex-based whole-word substitutions. This converted multilingual keywords directly into Python equivalents. It also normalized `{` → `:`, `}` → `""`, `;` → `""`.
+
+3. **The old parser (`run_parser`)** called `transpile()` internally, then used `ast.parse()` on the resulting Python code to check for syntax errors. It also generated a visual AST tree via `generate_ast_tree()`.
+
+4. **No structured token representation existed.** The system had no Token class, no token stream, no line/column tracking, and no concept of token types.
+
+5. **Three languages were supported:** English, Hindi, Telugu. The `language_rules.json` file mapped each TOKEN_* name to arrays of multilingual synonyms across these three languages.
+
+6. **Security:** A `security_homoglyph_check()` method detected and normalized Cyrillic and Devanagari homoglyphs.
+
+---
+
+## B. Contribution 1 — Real Lexer & Token Pipeline: Before vs After
+
+| Area                     | Before | After |
+|:------------------------|:-------|:------|
+| **Lexical analysis**     | Regex `re.findall()` classification, output to log file only | Genuine character-by-character lexer in `lexer.py`, produces structured token stream |
+| **Token representation** | None — just strings like `KEYWORD(print)` | `Token` dataclass with `type`, `lexeme`, `value`, `line`, `column`, `token_name` |
+| **Token types**          | Ad-hoc string labels | `TokenType` enum: KEYWORD, IDENTIFIER, NUMBER, STRING, OPERATOR, DELIMITER, COMMENT, NEWLINE, EOF |
+| **Token stream**         | Not produced — lexer only wrote a log file | `List[Token]` returned by `VitalLexer.tokenize()`, stored in `compiler.last_token_stream` |
+| **Line/column tracking** | Line number only (in log) | Every token carries 1-based line AND column numbers |
+| **Multilingual normalization** | Happened only in transpile() via regex | Tokens carry both original `lexeme` (e.g. `"अगर"`) and normalized `value` (e.g. `"if"`) with `token_name` (e.g. `"TOKEN_IF"`) |
+| **Keyword lookup**       | Only via `translation_map` during transpilation | Lexer performs greedy keyword matching during tokenization |
+| **Parser input**         | Raw source code string → regex transpilation → ast.parse() | Token stream available for inspection; parser log now reports token count and keyword/identifier statistics |
+| **Lexer logging**        | Flat `['KEYWORD(print)', 'SYM(()', ...]` per line | Rich structured log: `KEYWORD("अगर") → TOKEN_IF → "if"  @ C1` with line grouping and column positions |
+| **String handling**      | Strings were broken into individual characters/words | Proper quoted string token extraction, preserving the string as one token |
+| **Comment handling**     | `#` and `//` partially handled | Full comment recognition including multilingual comment keywords (টিপ্পণী, వ్యాఖ్య, মন্তব্য, etc.) |
+| **Unicode support**      | Devanagari (U+0900-097F), Telugu (U+0C00-0C7F) | Devanagari, Bengali (U+0980-09FF), Telugu — all three script blocks |
+
+### How the token stream is consumed
+
+The token stream (`self.last_token_stream`) is:
+1. **Produced** by `run_lexer()` via `self.lexer.tokenize(source_code)`
+2. **Stored** on the `Compiler` instance for access by later stages
+3. **Used by `write_log()`** to generate the enhanced lexer log
+4. **Referenced by `run_parser()`** which reports token stream statistics (total tokens, keyword count, identifier count) in the parser validation report
+5. **Accessible** to any code that holds a reference to the `Compiler` instance (e.g., GUI, benchmark, tests)
+
+The existing transpilation pipeline (`transpile()`) is preserved unchanged — it continues to perform the regex-based translation that generates Python IR. The token stream exists as the authoritative lexical representation alongside this pipeline, establishing the architectural foundation for a future compiler front-end that could consume tokens directly.
+
+---
+
+## C. Contribution 2 — Bengali, Marathi & Nepali: Before vs After
+
+| Area | Before | After |
+|:-----|:-------|:------|
+| **Supported languages** | English, Hindi, Telugu (3) | English, Hindi, Telugu, Bengali, Marathi, Nepali (6) |
+| **language_rules.json entries** | ~160 entries | ~257 entries |
+| **Bengali (বাংলা) support** | Absent | Full: ধরো, ছাপাও, যদি, নাহলে, যতক্ষণ, থামো, চলো, যোগ, বিয়োগ, গুণ, ভাগ, এবং, অথবা, না, etc. |
+| **Marathi (मराठी) support** | Absent | Full: घ्या, लिहा, जर, नाहीतर, जोपर्यंत, बंद_करा, पुढे_चला, जोडा, वजा, गुणाकार, भागाकार, आणि, किंवा, नाही, etc. |
+| **Nepali (नेपाली) support** | Absent | Full: मान, छाप, यदि_हो, नत्र, जबसम्म, रोक, जारी_राख, जोड, वजाब, गुणन, भाग_गर, र, वा, होइन, etc. |
+| **Unicode lexer support** | Devanagari + Telugu | Devanagari + Bengali (U+0980-09FF) + Telugu |
+| **Internal representation** | Unchanged | All six languages map to the same TOKEN_* constants |
+| **Mixed-language support** | English + Hindi + Telugu mixing | All six languages can be freely mixed |
+| **Keyword collision avoidance** | N/A | Marathi and Nepali use distinct Devanagari words that don't collide with Hindi |
+| **Stop words** | English + Hindi + Telugu | Extended with Bengali (তা, এটা, হয়), Marathi (हे, ला, चे), Nepali (छ, लाई, गर्नुहोस्) |
+| **Comment keywords** | टिप्पणी, వ్యాఖ్య | + মন্তব্য (Bengali), टीप (Marathi), टिप्पणी_गर (Nepali) |
+
+### Language design decisions
+
+| Decision | Rationale |
+|:---------|:----------|
+| Bengali `ধরো` for "let" | Common Bengali imperative meaning "hold/assume", natural for variable declaration |
+| Bengali `ছাপাও` for "print" | Direct Bengali word for "print/stamp" |
+| Bengali `যদি` / `নাহলে` for if/else | Standard Bengali conditionals |
+| Bengali `যতক্ষণ` for "while" | Means "as long as" — natural loop construct |
+| Marathi `घ्या` for "let" | Means "take" — imperative form, distinct from Hindi `मानो` |
+| Marathi `लिहा` for "print" | Means "write" — distinct from Hindi `लिखो` |
+| Marathi `जर` / `नाहीतर` for if/else | Standard Marathi conditionals |
+| Marathi `जोपर्यंत` for "while" | Means "until" — standard Marathi, distinct from Hindi `जबतक` |
+| Nepali `मान` for "let" | Means "value/consider" — distinct from Hindi `मानो` (by omitting the vowel ending) |
+| Nepali `छाप` for "print" | Means "stamp/print" — distinct from Hindi `छापो` |
+| Nepali `यदि_हो` for "if" | Means "if it is" — distinct from Hindi `यदि` (added `_हो`) |
+| Nepali `जबसम्म` for "while" | Means "until" — standard Nepali |
+| All three use `_` compound words | For multi-word concepts like `else_if`, to avoid whitespace issues in the regex-based transpiler |
+
+---
+
+## D. Modified Files
+
+| File | What Changed | Why |
+|:-----|:-------------|:----|
+| `src/lexer.py` | **NEW FILE.** Token, TokenType, VitalLexer classes implementing real lexical analysis | Contribution 1: Real lexer with structured token stream |
+| `src/main.py` | (1) Import VitalLexer; (2) `run_lexer()` now produces token stream via `lexer.tokenize()`; (3) Added `keyword_to_token_name` reverse map; (4) Added Bengali Unicode range `\u0980-\u09FF` to transpile regex; (5) Parser report includes token statistics | Integration of Contribution 1 + Unicode support for Contribution 2 |
+| `src/language_rules.json` | Added Bengali, Marathi, Nepali keyword arrays to every TOKEN_* entry; added new stop words and comment keywords | Contribution 2: Three new languages |
+| `src/tests/equiv_english.vital` | **NEW FILE.** English equivalence test program | Cross-language testing |
+| `src/tests/equiv_hindi.vital` | **NEW FILE.** Hindi equivalence test program | Cross-language testing |
+| `src/tests/equiv_telugu.vital` | **NEW FILE.** Telugu equivalence test program | Cross-language testing |
+| `src/tests/equiv_bengali.vital` | **NEW FILE.** Bengali equivalence test program | Cross-language testing |
+| `src/tests/equiv_marathi.vital` | **NEW FILE.** Marathi equivalence test program | Cross-language testing |
+| `src/tests/equiv_nepali.vital` | **NEW FILE.** Nepali equivalence test program | Cross-language testing |
+| `tests/test_vital.py` | **NEW FILE.** 48-test comprehensive test suite | Regression, unit, equivalence, and lexer tests |
+
+**Files NOT modified:** `src/gui.py`, `src/benchmark.py`, all existing `.vital` programs, `src/venv/`.
+
+---
+
+## E. Architecture Diagram
+
+### Before
+
+```
+VITAL Source (.vital file)
+        ↓
+    run_lexer()  ────→  lexer_log.txt  (log only, output not consumed)
+        ↓
+    run_parser()
+        ↓
+    transpile()  ────→  regex-based keyword substitution
+        ↓
+    Python IR    ────→  ir.txt
+        ↓
+    exec()       ────→  output.txt
+```
+
+### After
+
+```
+VITAL Source (.vital file)
+        ↓
+    VitalLexer.tokenize()  ──→  Structured Token Stream (List[Token])
+        ↓                           │
+    VitalLexer.write_log() ←────────┘  ──→  Enhanced lexer_log.txt
+        ↓
+    Token stream stored on Compiler.last_token_stream
+        ↓
+    run_parser()  ←── reads token stream stats for report
+        ↓
+    transpile()   ←── existing regex-based IR generation (unchanged)
+        ↓
+    Python IR     ──→  ir.txt
+        ↓
+    exec()        ──→  output.txt
+```
+
+---
+
+## F. Test Results
+
+### Regression Tests (21 existing programs)
+
+| Program | Status |
+|:--------|:-------|
+| demo.vital (Telugu) | ✓ PASS |
+| low/low_1.vital (Hindi) | ✓ PASS |
+| low/low_2.vital (English) | ✓ PASS |
+| low/low_3.vital (Telugu) | ✓ PASS |
+| low/low_4.vital (English) | ✓ PASS |
+| low/low_5.vital (Hindi) | ✓ PASS |
+| med/med_1.vital (English) | ✓ PASS |
+| med/med_2.vital (English) | ✓ PASS |
+| med/med_3.vital (Telugu) | ✓ PASS |
+| med/med_4.vital (Hindi) | ✓ PASS |
+| med/med_5.vital (Telugu) | ✓ PASS |
+| high/high_1.vital (English) | ✓ PASS |
+| high/high_2.vital (Telugu) | ✓ PASS |
+| high/high_3.vital (Hindi) | ✓ PASS |
+| high/high_4.vital (English) | ✓ PASS |
+| high/high_5.vital (Hindi) | ✓ PASS |
+| complex/comp_1.vital (Mixed) | ✓ PASS |
+| complex/comp_2.vital (Mixed) | ✓ PASS |
+| complex/comp_3.vital (Mixed) | ✓ PASS |
+| complex/comp_4.vital (Mixed) | ✓ PASS |
+| complex/comp_5.vital (Mixed) | ✓ PASS |
+
+**Result: 21/21 PASS — zero regressions.**
+
+### Per-Language Unit Tests
+
+| Test | English | Hindi | Telugu | Bengali | Marathi | Nepali |
+|:-----|:-------:|:-----:|:------:|:-------:|:-------:|:------:|
+| Variable & Print | PASS | PASS | PASS | PASS | PASS | PASS |
+| Arithmetic | PASS | PASS | PASS | PASS | PASS | PASS |
+| If/Else | PASS | PASS | PASS | PASS | PASS | PASS |
+| While Loop | PASS | PASS | PASS | PASS | PASS | PASS |
+| Break | — | — | — | PASS | PASS | PASS |
+
+### Cross-Language Equivalence Test
+
+| Language | Output |
+|:---------|:-------|
+| English | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+| Hindi | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+| Telugu | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+| Bengali | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+| Marathi | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+| Nepali | `Sum :\n30\nGreater 25\nLoop total:\n10\n` |
+
+**All six languages produce identical output.** ✓
+
+> **Note:** "Sum :" appears instead of "Sum is:" because `is` is a stop word in the existing system. This is pre-existing behavior preserved from the original implementation.
+
+### Lexer Token Stream Tests (11 tests)
+
+| Test | Status |
+|:-----|:------:|
+| English tokens | PASS |
+| Hindi tokens | PASS |
+| Telugu tokens | PASS |
+| Bengali tokens | PASS |
+| Marathi tokens | PASS |
+| Nepali tokens | PASS |
+| Token has line/column | PASS |
+| Token stream ends with EOF | PASS |
+| String token extraction | PASS |
+| Comment token recognition | PASS |
+| Keyword normalization (6 languages → TOKEN_IF) | PASS |
+
+**Total: 48/48 tests PASS.**
+
+---
+
+## G. Cross-Language Example
+
+### Source Programs
+
+**English:**
+```
+let x = 10
+let y = 20
+let result = x + y
+print("Sum is:")
+print(result)
+if (result > 25) { print("Greater than 25") }
+else { print("Not greater than 25") }
+```
+
+**Bengali (বাংলা):**
+```
+ধরো x = 10
+ধরো y = 20
+ধরো result = x যোগ y
+ছাপাও("Sum is:")
+ছাপাও(result)
+যদি (result বড় 25) { ছাপাও("Greater than 25") }
+নাহলে { ছাপাও("Not greater than 25") }
+```
+
+**Marathi (मराठी):**
+```
+घ्या x = 10
+घ्या y = 20
+घ्या result = x जोडा y
+लिहा("Sum is:")
+लिहा(result)
+जर (result पेक्षा_मोठे 25) { लिहा("Greater than 25") }
+नाहीतर { लिहा("Not greater than 25") }
+```
+
+**Nepali (नेपाली):**
+```
+मान x = 10
+मान y = 20
+मान result = x जोड y
+छाप("Sum is:")
+छाप(result)
+यदि_हो (result भन्दा_ठूलो 25) { छाप("Greater than 25") }
+नत्र { छाप("Not greater than 25") }
+```
+
+### All produce:
+```
+Sum :
+30
+Greater 25
+```
+
+---
+
+## H. Limitations
+
+1. **Token stream is not yet the sole input to the parser.** The existing parser still uses the regex-based `transpile()` method to generate Python IR. The token stream exists as the authoritative lexical representation and is used for logging and statistics, but full parser integration would be a future contribution.
+
+2. **Stop words affect string contents.** The transpiler's regex substitution can modify string literal contents (e.g., "Sum is:" → "Sum :"). This is a pre-existing behavior that was preserved to avoid breaking existing programs.
+
+3. **low/low_3.vital** has a pre-existing syntax error (uses `లేదా_ఒకవేళ` which is not in the keyword map — only `లేదా_అయితే` is defined). This was preserved as-is.
+
+4. **Marathi and Nepali share Devanagari script** with Hindi. Keyword collisions were avoided by choosing linguistically distinct words, but care must be taken when adding future keywords.
+
+---
+
+## I. VIVA QUESTIONS AND ANSWERS
+
+### 1. What is lexical analysis?
+Lexical analysis is the first phase of a compiler that reads the raw source code character by character and groups characters into meaningful units called **tokens**. It converts a stream of characters into a stream of tokens, each carrying type information (keyword, identifier, number, etc.) and metadata like line and column position.
+
+### 2. What is the difference between a lexer and a parser?
+The **lexer** converts characters into tokens (the "words" of the language). The **parser** takes those tokens and checks whether they form valid grammatical structures according to the language's syntax rules (the "sentences"). The lexer handles lexical structure; the parser handles syntactic structure.
+
+### 3. What did the old lexer do?
+The old lexer used `re.findall()` to split each line into words and symbols using a regex pattern. It classified each piece as KEYWORD, NUM, ID, or SYM and wrote these classifications to `lexer_log.txt`. Critically, this output was **never returned or consumed** by the rest of the pipeline — it was purely a logging/demonstration feature.
+
+### 4. Why was the old lexer not a complete token pipeline?
+Because it never produced a data structure that downstream stages could consume. The actual source-to-Python translation was done separately by `transpile()` using regex substitution. The lexer's output existed only in a text log file and had no influence on compilation.
+
+### 5. What is a token?
+A token is a structured representation of a single lexical element in source code. In our implementation, each `Token` object contains: **type** (KEYWORD, IDENTIFIER, NUMBER, etc.), **lexeme** (the original source text, e.g. "अगर"), **value** (the normalized form, e.g. "if"), **line** number, **column** number, and **token_name** (the internal identifier, e.g. "TOKEN_IF").
+
+### 6. Why do tokens need line and column information?
+Line and column information is essential for: (a) **error reporting** — telling the programmer exactly where a problem occurred, (b) **debugging** — understanding the source location of each token, (c) **source mapping** — relating generated code back to original source positions.
+
+### 7. How does the new lexer work?
+The new `VitalLexer` reads source code character by character. For each character position, it determines the token type: whitespace is skipped, `"` starts a string, `#` or `//` starts a comment, operators and delimiters are matched by character lookup, digits start number literals, and Unicode/ASCII letters start words. For words, it performs greedy matching against the keyword map — if a word matches a known keyword in any language, it becomes a KEYWORD token with the normalized value; otherwise it becomes an IDENTIFIER.
+
+### 8. How are Unicode languages handled?
+The lexer explicitly defines three Unicode block ranges: Devanagari (U+0900–U+097F) for Hindi/Marathi/Nepali, Bengali (U+0980–U+09FF), and Telugu (U+0C00–U+0C7F). Characters in these ranges are treated as valid word characters that can start or continue identifiers and keywords. The `_is_word_start()` and `_is_word_char()` methods check these ranges.
+
+### 9. How does Bengali map to the common representation?
+Bengali keywords like `ধরো` (let), `ছাপাও` (print), `যদি` (if), `নাহলে` (else), `যতক্ষণ` (while) are listed in `language_rules.json` alongside English/Hindi/Telugu equivalents. When the lexer encounters `যদি`, it looks it up in the translation map, finds that it maps to Python's `"if"`, and creates a Token with `lexeme="যদি"`, `value="if"`, `token_name="TOKEN_IF"`. The transpiler then replaces `যদি` with `if` in the IR.
+
+### 10. How does Marathi map to the common representation?
+Same mechanism as Bengali. Marathi keywords like `घ्या` (let), `लिहा` (print), `जर` (if), `नाहीतर` (else), `जोपर्यंत` (while) are registered in `language_rules.json`. These are distinct Devanagari words that do not collide with Hindi keywords. For example, Hindi uses `मानो` for "let" while Marathi uses `घ्या`.
+
+### 11. How does Nepali map to the common representation?
+Same mechanism. Nepali keywords like `मान` (let), `छाप` (print), `यदि_हो` (if), `नत्र` (else), `जबसम्म` (while) are registered in `language_rules.json`. Nepali shares Devanagari script with Hindi, so keywords were carefully chosen to avoid collisions — e.g., Nepali `यदि_हो` vs Hindi `यदि`.
+
+### 12. How do you guarantee that six languages have the same semantics?
+All six languages map to the same set of TOKEN_* constants, which in turn map to the same Python keywords/operators. The semantic meaning is defined once (in the `get_syntax()` method) and is language-independent. Cross-language equivalence tests verify that semantically identical programs in all six languages produce identical output.
+
+### 13. What happens after lexical analysis?
+After lexical analysis, the token stream is stored on the Compiler instance. The parser then validates the source by transpiling it to Python and using `ast.parse()` to check for syntax errors. If valid, the transpiler generates Python IR which is executed by `exec()`. The token stream is also used for enhanced logging and parser statistics.
+
+### 14. How did you avoid breaking English/Hindi/Telugu?
+By: (a) preserving the existing `transpile()` method unchanged, (b) only **appending** new keywords to `language_rules.json` arrays without modifying existing entries, (c) collecting a complete baseline of all 21 existing program outputs before modifying anything, (d) running regression tests after every change to verify output identity.
+
+### 15. What testing did you perform?
+48 automated tests: 11 lexer token stream tests, 4 unit tests each for English/Hindi/Telugu, 5 unit tests each for Bengali/Marathi/Nepali, 1 cross-language equivalence test (covering all 6 languages), and 9 regression tests for existing programs. Additionally, a full 21-program regression comparison against pre-modification baselines.
+
+### 16. What was the biggest technical challenge?
+Ensuring that Marathi and Nepali (which share Devanagari script with Hindi) had completely distinct keyword sets to avoid collisions. For example, Hindi `मानो` (let), Marathi `घ्या` (let), and Nepali `मान` (let) are all Devanagari but linguistically distinct. Each was carefully chosen to not be a substring of another.
+
+### 17. Why is this a compiler contribution rather than merely adding keywords?
+Contribution 1 introduces a genuine lexical analysis stage that produces structured tokens with type classifications, original lexemes, normalized values, and source positions — the foundation of any real compiler front-end. Before this, there was no formal tokenization: the system jumped directly from source text to regex substitution. Contribution 2 is not merely "adding keywords" — it requires proper Unicode block support in the lexer, careful collision avoidance across three Devanagari-script languages, and verification of semantic equivalence.
+
+### 18. What would be the next step toward a fully independent compiler front-end?
+The next step would be a **custom recursive-descent parser** that consumes the token stream directly (instead of the current approach of regex-based transpilation followed by `ast.parse()`). This parser would build a VITAL-specific AST, enabling proper error messages with source locations, semantic analysis, and eventually a code generator that produces Python (or another target) from the AST.

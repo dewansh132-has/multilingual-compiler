@@ -1,0 +1,23 @@
+टिप्पणी_गर Collatz Conjecture (3N + 1) with Max Step Limiter
+मान n = 15
+मान steps = 0
+मान max_steps = 100
+
+छाप("Starting Collatz Sequence...")
+
+जबसम्म (n != 1) {
+    मान steps = steps जोड 1
+    यदि_हो (steps > max_steps) {
+        छाप("Max steps reached! Breaking.")
+        रोक
+    }
+    
+    यदि_हो (n % 2 == 0) {
+        मान n = n / 2
+    }
+    नत्र {
+        मान n = (3 * n) जोड 1
+    }
+}
+छाप("Total Steps Taken:")
+छाप(steps)

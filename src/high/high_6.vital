@@ -1,0 +1,15 @@
+মন্তব্য Extended Fibonacci Sequence Generator
+ধরো পদ_ক = 0
+ধরো পদ_খ = 1
+ধরো গণক = 0
+ধরো সীমা = 1000
+
+ছাপাও("Generating 1000 Fibonacci cycles...")
+
+যতক্ষণ (গণক < সীমা) {
+    ধরো পরবর্তী = পদ_ক যোগ পদ_খ
+    ধরো পদ_ক = পদ_খ
+    ধরো পদ_খ = পরবর্তী
+    ধরো গণক = গণক যোগ 1
+}
+ছাপাও("Final Memory State Reached.")

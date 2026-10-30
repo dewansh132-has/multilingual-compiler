@@ -1,0 +1,23 @@
+टिप्पणी_गर नेपाली: चर, गणित, छपाई, सर्त, लुप
+मान x = 10
+मान y = 20
+मान result = x जोड y
+
+छाप("Sum is:")
+छाप(result)
+
+यदि_हो (result भन्दा_ठूलो 25) {
+    छाप("Greater than 25")
+}
+नत्र {
+    छाप("Not greater than 25")
+}
+
+मान counter = 0
+मान total = 0
+जबसम्म (counter भन्दा_सानो 5) {
+    मान total = total जोड counter
+    मान counter = counter जोड 1
+}
+छाप("Loop total:")
+छाप(total)

@@ -1,0 +1,23 @@
+মন্তব্য Complex University Grading System
+ধরো নম্বর = 88
+ধরো উপস্থিতি = 95
+
+ছাপাও("--- Student Academic Report ---")
+ছাপাও("Total Marks:")
+ছাপাও(নম্বর)
+
+যদি (নম্বর >= 90) {
+    ছাপাও("Grade: O (Outstanding)")
+}
+নাহলে_যদি (নম্বর >= 80 এবং উপস্থিতি >= 90) {
+    ছাপাও("Grade: A+ (Excellent with Bonus)")
+}
+নাহলে_যদি (নম্বর >= 80) {
+    ছাপাও("Grade: A (Excellent)")
+}
+নাহলে_যদি (নম্বর >= 70) {
+    ছাপাও("Grade: B+ (Good)")
+}
+নাহলে {
+    ছাপাও("Grade: Review Needed")
+}

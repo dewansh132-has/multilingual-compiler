@@ -1,0 +1,4 @@
+--- Bill Generation ---
+Discount Applied!
+Final Bill :
+720.0

@@ -1,0 +1,13 @@
+टिप्पणी Number Digit Reversal using Multilingual Math
+मानो number = 987654321
+అనుకో reversed = 0
+
+लिखो("Reversing large integer...")
+
+ఉన్నంతవరకు (number > 0) {
+    let remainder = number % 10
+    అనుకో reversed = (reversed * 10) + remainder
+    मानो number = number / 10
+}
+రాయి("Reversal Complete.")
+print(reversed)

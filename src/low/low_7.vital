@@ -1,0 +1,18 @@
+टीप Climate Control System
+घ्या तापमान = 38
+घ्या आर्द्रता = 80
+
+लिहा("Weather Status Check:")
+
+जर (तापमान > 40) {
+    लिहा("Warning: Extreme Heat Wave")
+}
+नाहीतर_जर (तापमान > 35 आणि आर्द्रता > 75) {
+    लिहा("Warning: High Heat Index, AC required")
+}
+नाहीतर_जर (तापमान < 15) {
+    लिहा("Status: Cold, activate heater")
+}
+नाहीतर {
+    लिहा("Status: Normal Conditions")
+}

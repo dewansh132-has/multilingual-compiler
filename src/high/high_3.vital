@@ -1,0 +1,12 @@
+टिप्पणी Harmonic Series Simulation (Integer based)
+मानो पद = 5000
+मानो योग = 0
+मानो i = 1
+
+लिखो("Running massive 5000 loop iteration...")
+
+while (i <= पद) {
+    मानो योग = योग + (1000000 / i)
+    मानो i = i + 1
+}
+लिखो("ALU Loop completely exhausted.")

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VITAL IDE — Multilingual Programming Language Compiler</title>
+  <meta name="description" content="Modern browser-based IDE for the VITAL multilingual programming language compiler supporting English, Hindi, Telugu, Bengali, Marathi, and Nepali.">
+  
+  <!-- CodeMirror Stylesheet -->
+  <link rel="stylesheet" href="/static/vendor/codemirror.min.css">
+  
+  <!-- Custom IDE Stylesheet -->
+  <link rel="stylesheet" href="/static/css/ide.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- HEADER -->
+    <header id="ide-header">
+      <div class="header-left">
+        <div class="app-logo">
+          <span>VITAL IDE</span>
+          <span class="app-logo-badge">MULTILINGUAL</span>
+        </div>
+        <div class="header-subtitle">
+          6 Languages • Single Universal Compiler
+        </div>
+      </div>
+
+      <div class="header-toolbar">
+        <!-- Primary Toolbar Group: Language/Program Name, Run, AI Assistant -->
+        <div class="toolbar-primary-group header-center" id="toolbar-primary-group">
+          <div class="current-file-badge" id="header-file-badge" title="Active Language and Program Name">
+            <span class="lang-indicator-tag" id="current-lang-tag">English</span>
+            <span class="file-badge-separator">·</span>
+            <span id="current-filename-text">hello.vital</span>
+          </div>
+
+          <!-- RUN BUTTON -->
+          <button id="btn-run" class="btn btn-primary" title="Execute Pipeline (Ctrl + Enter)">
+            <span id="run-btn-icon">▶</span>
+            <span id="run-btn-text">Run</span>
+          </button>
+
+          <!-- AI ASSISTANT BUTTON -->
+          <button id="btn-ai-assistant" class="btn btn-ai-toolbar" title="Open AI Assistant Panel">
+            <span class="btn-ai-icon">🤖</span>
+            <span>AI Assistant</span>
+          </button>
+        </div>
+
+        <div class="toolbar-divider" aria-hidden="true"></div>
+
+        <!-- Secondary Toolbar Group: File & Console Actions -->
+        <div class="toolbar-secondary-group header-right" id="toolbar-secondary-group">
+          <!-- New File -->
+          <button id="btn-new" class="btn btn-secondary" title="Create new program (Untitled.vital)">
+            <span>+ New</span>
+          </button>
+
+          <!-- Open File -->
+          <button id="btn-open" class="btn btn-secondary" title="Open local .vital file from computer">
+            <span>📂 Open</span>
+          </button>
+          <input type="file" id="file-input" class="hidden-file-input" accept=".vital,.txt">
+
+          <!-- Save As -->
+          <button id="btn-save" class="btn btn-secondary" title="Download current source code as .vital file">
+            <span>💾 Save As</span>
+          </button>
+
+          <!-- Reset to original -->
+          <button id="btn-reset" class="btn btn-secondary" title="Reset current editor code to original demo">
+            <span>⟳ Reset</span>
+          </button>
+
+          <!-- Clear Output -->
+          <button id="btn-clear" class="btn btn-secondary" title="Clear compiler output panel">
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SECTION 11: LIVE COMPILER PIPELINE PROGRESS TRACKER -->
+    <section id="pipeline-progress-container" class="pipeline-progress-container" aria-label="Compiler Pipeline Progress Tracker">
+      <div class="pipeline-progress-header">
+        <div class="pipeline-progress-title-group">
+          <span class="pipeline-tracker-icon">⚡</span>
+          <span class="pipeline-tracker-title">Compiler & Security Pipeline</span>
+          <span class="pipeline-status-badge badge-idle" id="pipeline-status-badge">Ready</span>
+        </div>
+        <div class="pipeline-metrics-group">
+          <span class="pipeline-metric" id="pipeline-metric-stage">Stage: Idle</span>
+          <span class="pipeline-metric-separator">•</span>
+          <span class="pipeline-metric" id="pipeline-metric-progress">0/14 Stages (0%)</span>
+          <span class="pipeline-metric-separator">•</span>
+          <span class="pipeline-metric" id="pipeline-metric-time">0.0 ms</span>
+        </div>
+      </div>
+      
+      <!-- Overall Progress Track Fill -->
+      <div class="pipeline-progress-track">
+        <div class="pipeline-progress-fill" id="pipeline-progress-fill" style="width: 0%;"></div>
+      </div>
+
+      <!-- Stepper Nodes (Horizontal Stepper on wide screens, responsive scrollable on narrow screens) -->
+      <div class="pipeline-stepper" id="pipeline-stepper" role="list">
+        <!-- 14 Canonical Stages populated by JavaScript -->
+      </div>
+    </section>
+
+    <!-- MAIN THREE-COLUMN WORKSPACE -->
+    <main id="ide-workspace">
+      
+      <!-- LEFT: FILE EXPLORER -->
+      <aside id="panel-explorer" class="ide-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📁</span>
+            <span>Explorer</span>
+          </div>
+          <span class="tree-count-badge" id="total-demos-count">0 Demos</span>
+        </div>
+
+        <!-- Explorer View Tabs -->
+        <div class="explorer-tabs">
+          <button class="explorer-tab-btn active" id="tab-view-lang">By Language</button>
+          <button class="explorer-tab-btn" id="tab-view-folder">By Category</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="explorer-search-box">
+          <input type="text" id="demo-search-input" class="explorer-search-input" placeholder="Search demo programs...">
+        </div>
+
+        <!-- Demo Tree Container -->
+        <div id="demo-tree" class="explorer-tree">
+          <!-- Dynamically populated by ide.js -->
+        </div>
+      </aside>
+
+      <!-- RESIZER 1 -->
+      <div class="panel-resizer" id="resizer-left"></div>
+
+      <!-- CENTER: CODE EDITOR -->
+      <section id="panel-editor" class="ide-panel">
+        <!-- Editor Tab Bar -->
+        <div class="editor-tab-bar">
+          <div class="editor-tabs-group">
+            <div class="editor-tab active" id="editor-active-tab">
+              <span id="tab-file-icon">📄</span>
+              <span id="tab-filename">hello.vital</span>
+              <span class="editor-dirty-dot" id="tab-dirty-indicator" title="Unsaved changes"></span>
+            </div>
+          </div>
+          <div class="editor-actions-group">
+            <button id="btn-view-original" class="btn-tab-action" title="View pristine original demo code from disk (Read-only)">
+              <span>👁️ View Original</span>
+            </button>
+            <button id="btn-restore-original" class="btn-tab-action" title="Restore exact original vulnerable source into working buffer">
+              <span>⟲ Restore Original</span>
+            </button>
+            <button id="btn-undo-editor-fix" class="btn-tab-action" title="Undo the last applied security remediation" disabled>
+              <span>↩ Undo Fix</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Breadcrumb Bar -->
+        <div class="editor-breadcrumb">
+          <span>Location:</span>
+          <span class="breadcrumb-lang" id="breadcrumb-lang">English</span>
+          <span>•</span>
+          <span id="breadcrumb-path">examples/english/hello.vital</span>
+        </div>
+
+        <!-- CodeMirror Editor Container -->
+        <div class="codemirror-wrapper">
+          <textarea id="code-editor"></textarea>
+        </div>
+      </section>
+
+      <!-- RESIZER 2 -->
+      <div class="panel-resizer" id="resizer-right"></div>
+
+      <!-- RIGHT: COMPILER & OUTPUT PANEL -->
+      <section id="panel-output" class="ide-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>⚙</span>
+            <span>Compiler Output & Pipeline</span>
+          </div>
+          <span id="output-timing-badge" class="tree-count-badge">0 ms</span>
+        </div>
+
+        <!-- Waiting State (Visible until Final Report is explicitly generated) -->
+        <div class="output-waiting-state" id="output-waiting-state">
+          <div class="waiting-state-card">
+            <div class="waiting-state-icon">⏳</div>
+            <div class="waiting-state-title">Compiler Artifacts Awaiting Completion</div>
+            <div class="waiting-state-message" id="output-waiting-message">Compiler artifacts will appear here after all required stages pass and the Final Report is generated.</div>
+            <div class="waiting-state-subtext" id="output-waiting-subtext">Click ▶ Run to start progressive stage execution. If a stage pauses for errors, click that stage's box above to review and apply fixes.</div>
+          </div>
+        </div>
+
+        <!-- Output Stage Tabs -->
+        <div class="output-tabs-bar" id="output-tabs-bar" style="display: none;">
+          <button class="output-tab-btn active" data-tab="tab-out-program">★ Output</button>
+          <button class="output-tab-btn" data-tab="tab-out-pipeline">Pipeline Report</button>
+          <button class="output-tab-btn" data-tab="tab-out-lexer">1. Lexer</button>
+          <button class="output-tab-btn" data-tab="tab-out-parser">2. Parser</button>
+          <button class="output-tab-btn" data-tab="tab-out-ast">3. AST</button>
+          <button class="output-tab-btn" data-tab="tab-out-ir">4. IR (Python)</button>
+          <button class="output-tab-btn" data-tab="tab-out-symbol">5. Symbol Table</button>
+          <button class="output-tab-btn" data-tab="tab-out-optimization">6. Optimization</button>
+          <button class="output-tab-btn ai-tab-btn" data-tab="tab-out-ai" id="tab-btn-ai">
+            <span>🤖 AI Assistant</span>
+            <span class="ai-status-pill" id="ai-tab-status-pill">Ready</span>
+          </button>
+        </div>
+
+        <!-- Output Content Area -->
+        <div class="output-content-area" id="output-content-area" style="display: none;">
+          <button id="btn-copy-output" class="copy-output-btn" title="Copy current output">Copy</button>
+
+          <!-- Tab 1: Program Execution Output -->
+          <div class="output-tab-content active" id="tab-out-program">
+            <pre class="console-pre" id="console-program-output">> System Ready. Select a demo or click ▶ Run to execute.</pre>
+          </div>
+
+          <!-- Tab 2: Full Aggregated Pipeline Report -->
+          <div class="output-tab-content" id="tab-out-pipeline">
+            <div class="pipeline-report-actions-bar" id="pipeline-report-actions-bar" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; justify-content: flex-end;">
+              <button class="btn btn-primary btn-sm" id="btn-pipeline-save-corrected" title="Save corrected code as a new file">💾 Save Corrected Code</button>
+              <button class="btn btn-secondary btn-sm" id="btn-pipeline-restore-original" title="Restore original educational demo">↺ Restore Original</button>
+            </div>
+            <pre class="console-pre" id="console-pipeline-report">(Click Run to generate complete pipeline report)</pre>
+          </div>
+
+          <!-- Tab 3: Lexical Analysis Log -->
+          <div class="output-tab-content" id="tab-out-lexer">
+            <pre class="console-pre" id="console-lexer-log">(Lexer token stream will appear here)</pre>
+          </div>
+
+          <!-- Tab 4: Parser Validation Log -->
+          <div class="output-tab-content" id="tab-out-parser">
+            <pre class="console-pre" id="console-parser-log">(Parser validation report will appear here)</pre>
+          </div>
+
+          <!-- Tab 5: Visual AST Log -->
+          <div class="output-tab-content" id="tab-out-ast">
+            <pre class="console-pre" id="console-ast-log">(Visual AST hierarchy will appear here)</pre>
+          </div>
+
+          <!-- Tab 6: Transpiled IR (Python) -->
+          <div class="output-tab-content" id="tab-out-ir">
+            <pre class="console-pre" id="console-ir-code">(Transpiled Python intermediate code will appear here)</pre>
+          </div>
+
+          <!-- Tab 7: Semantic Symbol Table -->
+          <div class="output-tab-content" id="tab-out-symbol">
+            <pre class="console-pre" id="console-symbol-table">(Semantic symbol table will appear here)</pre>
+          </div>
+
+          <!-- Tab 7b: Mandatory IR Optimization Report -->
+          <div class="output-tab-content" id="tab-out-optimization">
+            <pre class="console-pre" id="console-optimization-report">(Mandatory IR Optimization passes, transformations, and verification proof will appear here)</pre>
+          </div>
+
+          <!-- Tab 8: Contribution 6 — Real-Time AI Programming Assistant -->
+          <div class="output-tab-content" id="tab-out-ai">
+            <div class="ai-panel-wrapper">
+              
+              <!-- AI Control Toolbar -->
+              <div class="ai-toolbar">
+                <div class="ai-toolbar-left">
+                  <button id="btn-ai-analyze" class="btn btn-primary btn-sm" title="Analyze current editor code (Manual trigger)">
+                    <span>🔍 Analyze Code</span>
+                  </button>
+                  <button id="btn-ai-explain" class="btn btn-secondary btn-sm" title="Explain latest compilation/runtime error">
+                    <span>💡 Explain Error</span>
+                  </button>
+                  <button id="btn-ai-clear" class="btn btn-secondary btn-sm" title="Clear AI suggestions">
+                    <span>Clear</span>
+                  </button>
+                </div>
+
+                <div class="ai-toolbar-right">
+                  <label class="ai-toggle-label" title="Automatically analyze code after typing pauses (debounced ~900ms)">
+                    <input type="checkbox" id="ai-auto-toggle" checked>
+                    <span class="ai-toggle-slider"></span>
+                    <span class="ai-toggle-text">Real-Time Auto</span>
+                  </label>
+                  <span class="ai-provider-badge" id="ai-provider-badge" title="Active AI Engine">Checking...</span>
+                </div>
+              </div>
+
+              <!-- Strict Non-Modification Advisory Banner -->
+              <div class="ai-advisory-banner">
+                <span class="ai-banner-icon">🛡️</span>
+                <span class="ai-banner-text"><strong>Strictly Advisory:</strong> AI suggestions are for learning and review. Your source code is <strong>never modified automatically</strong>.</span>
+              </div>
+
+              <!-- Loading & Status Indicator -->
+              <div id="ai-loading-bar" class="ai-loading-bar" style="display: none;">
+                <div class="ai-spinner"></div>
+                <span id="ai-loading-text">Analyzing VITAL code and compiler diagnostics...</span>
+              </div>
+
+              <!-- AI Output Display -->
+              <div id="ai-results-container" class="ai-results-container">
+                <div class="ai-empty-state" id="ai-empty-state">
+                  <div class="ai-empty-icon">🤖</div>
+                  <div class="ai-empty-title">Real-Time AI Programming Assistant Ready</div>
+                  <p class="ai-empty-desc">
+                    Type or edit VITAL code in the editor, or click <strong>🔍 Analyze Code</strong> to inspect for syntax problems, semantic issues, suspicious patterns, and code quality improvements.
+                  </p>
+                  <div class="ai-feature-badges">
+                    <span class="ai-feature-badge">✓ Syntax Checks</span>
+                    <span class="ai-feature-badge">✓ Semantic Diagnostics</span>
+                    <span class="ai-feature-badge">✓ Suspicious Code</span>
+                    <span class="ai-feature-badge">✓ Multilingual Support</span>
+                    <span class="ai-feature-badge">✓ Read-Only Guarantee</span>
+                  </div>
+                </div>
+
+                <!-- Structured Results (Populated dynamically) -->
+                <div id="ai-analysis-content" class="ai-analysis-content" style="display: none;">
+                  <div class="ai-summary-header" id="ai-summary-header"></div>
+                  <div class="ai-findings-list" id="ai-findings-list"></div>
+                  <div class="ai-pedagogical-footer" id="ai-pedagogical-footer"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- STATUS BAR -->
+    <footer id="ide-statusbar">
+      <div class="statusbar-left">
+        <span class="status-indicator-dot" id="status-indicator-dot"></span>
+        <span id="statusbar-text">Status: System Ready | Multilingual Engine Loaded</span>
+      </div>
+      <div class="statusbar-right">
+        <span id="statusbar-elapsed">0.0 ms</span>
+        <span id="statusbar-cursor">Ln 1, Col 1</span>
+        <span>UTF-8</span>
+        <span title="6 Languages: EN, HI, TE, BN, MR, NE">VITAL v2.0</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- User-Controlled Fix Review & Diff Modal -->
+  <div id="fix-modal-overlay" class="fix-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="fix-modal-title">
+    <div class="fix-modal-card">
+      <div class="fix-modal-header">
+        <div class="fix-modal-title-group">
+          <span class="fix-modal-icon">✨</span>
+          <span class="fix-modal-title" id="fix-modal-title">Security Remediation Review</span>
+          <span class="fix-modal-badge" id="fix-modal-severity">Critical</span>
+          <span class="fix-modal-source-badge badge-local-rule" id="fix-modal-source">Local rule</span>
+          <span class="fix-modal-val-badge val-not-tested" id="fix-modal-validation">Not yet validated</span>
+        </div>
+        <button class="fix-modal-close" id="btn-close-fix-modal">✕</button>
+      </div>
+
+      <!-- Progressive AI Refinement Bar (Non-blocking) -->
+      <div id="fix-ai-refining-bar" class="fix-ai-refining-bar" style="display: none;">
+        <span class="ai-spin-icon">⏳</span>
+        <span id="fix-ai-refining-text">Ollama AI is refining this proposal in background...</span>
+      </div>
+
+      <div class="fix-modal-body">
+        <p class="fix-modal-desc" id="fix-modal-explanation">Explanation of proposed changes.</p>
+        
+        <!-- View mode toggle: Unified Diff vs Split Before/After -->
+        <div class="diff-view-modes">
+          <button class="diff-mode-btn active" id="btn-mode-unified">Unified Diff</button>
+          <button class="diff-mode-btn" id="btn-mode-split">Before & After</button>
+        </div>
+
+        <div class="diff-container" id="diff-container-unified">
+          <div class="diff-header">
+            <span>Diff Preview (Red = Remove, Green = Add)</span>
+            <span class="diff-file-tag">editor buffer</span>
+          </div>
+          <pre class="diff-pre" id="fix-diff-preview"></pre>
+        </div>
+
+        <div class="diff-container-split" id="diff-container-split" style="display: none;">
+          <div class="split-col">
+            <div class="diff-header">
+              <span>Before (Current Working Buffer)</span>
+            </div>
+            <pre class="split-pre" id="fix-split-before"></pre>
+          </div>
+          <div class="split-col">
+            <div class="diff-header">
+              <span>After (Proposed Correction)</span>
+            </div>
+            <pre class="split-pre" id="fix-split-after"></pre>
+          </div>
+        </div>
+
+        <div class="fix-modal-guarantee">
+          <span>🛡️ <strong>Safety Guarantee:</strong> This fix modifies only the reviewed code in your editor buffer. Disk demo files remain untouched. An undo snapshot will be saved.</span>
+        </div>
+      </div>
+      <div class="fix-modal-footer">
+        <button class="btn btn-secondary" id="btn-reject-fix">✕ Reject</button>
+        <button class="btn btn-secondary" id="btn-modal-view-original">👁️ View Original</button>
+        <button class="btn btn-secondary" id="btn-modal-undo-fix" style="display: none;">↩ Undo Fix</button>
+        <button class="btn btn-primary" id="btn-apply-fix">✓ Approve & Apply Fix</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Original Vulnerable Demo Viewer Modal -->
+  <div id="original-modal-overlay" class="fix-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="original-modal-title">
+    <div class="fix-modal-card original-modal-card">
+      <div class="fix-modal-header">
+        <div class="fix-modal-title-group">
+          <span class="fix-modal-icon">🔒</span>
+          <span class="fix-modal-title" id="original-modal-title">Original Vulnerable Demo (Pristine Disk Source)</span>
+          <span class="fix-modal-source-badge badge-read-only">READ-ONLY DISK FIXTURE</span>
+        </div>
+        <button class="fix-modal-close" id="btn-close-original-modal">✕</button>
+      </div>
+      <div class="fix-modal-body">
+        <div class="original-modal-meta">
+          <span>Source File: <strong id="original-modal-path">examples/...</strong></span>
+          <span>•</span>
+          <span id="original-modal-status" style="color: var(--accent-emerald);">Verified Immutable</span>
+        </div>
+        <div class="diff-container">
+          <div class="diff-header">
+            <span>Pristine Disk Content (Unmodified)</span>
+            <span class="diff-file-tag">read-only fixture</span>
+          </div>
+          <pre class="diff-pre original-modal-code" id="original-modal-code"></pre>
+        </div>
+      </div>
+      <div class="fix-modal-footer">
+        <button class="btn btn-secondary" id="btn-dismiss-original-modal">Close</button>
+        <button class="btn btn-primary" id="btn-modal-restore-into-buffer">⟲ Restore This into Editor Buffer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE DETAILS MODAL OVERLAY (Floating Single-Scroll Dialog) -->
+  <div id="stage-overlay-backdrop" class="stage-overlay-backdrop pipeline-stage-drawer" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="drawer-stage-title">
+    <div class="stage-overlay-dialog" id="stage-overlay-dialog">
+      <div class="stage-overlay-header" id="stage-overlay-header">
+        <div class="drawer-title" id="drawer-stage-title">Stage Details</div>
+        <button class="drawer-close-btn" id="drawer-close-btn" title="Close Stage Details (Esc)">✕</button>
+      </div>
+      <div class="stage-overlay-scroll-body drawer-body" id="drawer-stage-body">
+        <!-- Single vertically scrollable content area containing all stage cards, findings, diffs, and actions -->
+      </div>
+    </div>
+  </div>
+
+  <!-- CodeMirror Scripts (Vendored locally for offline reliability) -->
+  <script src="/static/vendor/codemirror.min.js"></script>
+  <script src="/static/vendor/matchbrackets.min.js"></script>
+  <script src="/static/vendor/closebrackets.min.js"></script>
+  <script src="/static/vendor/active-line.min.js"></script>
+  
+  <!-- VITAL Language Highlighter -->
+  <script src="/static/js/vital-mode.js"></script>
+
+  <!-- IDE Core Logic -->
+  <script src="/static/js/ide.js"></script>
+</body>
+</html>

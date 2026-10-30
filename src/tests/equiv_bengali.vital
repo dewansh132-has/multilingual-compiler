@@ -1,0 +1,23 @@
+মন্তব্য বাংলা: চলক, গণিত, মুদ্রণ, শর্ত, লুপ
+ধরো x = 10
+ধরো y = 20
+ধরো result = x যোগ y
+
+ছাপাও("Sum is:")
+ছাপাও(result)
+
+যদি (result বড় 25) {
+    ছাপাও("Greater than 25")
+}
+নাহলে {
+    ছাপাও("Not greater than 25")
+}
+
+ধরো counter = 0
+ধরো total = 0
+যতক্ষণ (counter ছোট 5) {
+    ধরো total = total যোগ counter
+    ধরো counter = counter যোগ 1
+}
+ছাপাও("Loop total:")
+ছাপাও(total)

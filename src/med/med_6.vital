@@ -1,0 +1,15 @@
+মন্তব্য Filtering Odd Numbers only
+ধরো গণনা = 0
+
+ছাপাও("Extracting Odd Numbers...")
+
+যতক্ষণ (গণনা < 15) {
+    ধরো গণনা = গণনা যোগ 1
+    
+    যদি (গণনা % 2 == 0) {
+        চলো
+    }
+    
+    ছাপাও("Found Odd Number:")
+    ছাপাও(গণনা)
+}

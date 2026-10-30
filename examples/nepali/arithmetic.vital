@@ -1,0 +1,16 @@
+टिप्पणी_गर नेपाली: गणितीय कार्यहरू
+मान a = 25
+मान b = 15
+मान sum = a जोड b
+मान diff = a घटाओ b
+मान prod = a गुणन b
+मान quot = a भाग_गर b
+
+छाप("Sum:")
+छाप(sum)
+छाप("Difference:")
+छाप(diff)
+छाप("Product:")
+छाप(prod)
+छाप("Quotient:")
+छाप(quot)

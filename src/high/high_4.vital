@@ -1,0 +1,13 @@
+// Iterative Exponentiation Stress Test
+let base_val = 3
+let exponent = 500
+let result = 1
+let i = 0
+
+print("Calculating 3 to the power of 500 iteratively...")
+
+while (i < exponent) {
+    let result = result * base_val
+    let i = i + 1
+}
+print("Exponentiation Success.")

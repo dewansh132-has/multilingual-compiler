@@ -1,0 +1,18 @@
+// Multilingual Geometric Progression Fusion
+मानो value = 2
+అనుకో multiplier = 2
+
+print("--- Hybrid Progression Started ---")
+
+ఉన్నంతవరకు (value < 2000) {
+    రాయి("Current State Value:")
+    print(value)
+    
+    // Mixing Hindi and English standard operators
+    let value = value * multiplier
+    
+    अगर (value > 1000) {
+        लिखो("Target Limit Reached (>1000). Stopping Engine.")
+        ఆపు
+    }
+}

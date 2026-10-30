@@ -1,0 +1,23 @@
+// Collatz Conjecture (3N + 1) with Max Step Limiter
+let n = 15
+let steps = 0
+let max_steps = 100
+
+print("Starting Collatz Sequence...")
+
+while (n != 1) {
+    let steps = steps + 1
+    if (steps > max_steps) {
+        print("Max steps reached! Breaking.")
+        break
+    }
+    
+    if (n % 2 == 0) {
+        let n = n / 2
+    }
+    else {
+        let n = (3 * n) + 1
+    }
+}
+print("Total Steps Taken:")
+print(steps)

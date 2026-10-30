@@ -1,0 +1,23 @@
+टिप्पणी Complex University Grading System
+मानो अंक = 88
+मानो उपस्थिति = 95
+
+लिखो("--- Student Academic Report ---")
+लिखो("Total Marks:")
+लिखो(अंक)
+
+अगर (अंक >= 90) {
+    लिखो("Grade: O (Outstanding)")
+}
+या_अगर (अंक >= 80 तथा उपस्थिति >= 90) {
+    लिखो("Grade: A+ (Excellent with Bonus)")
+}
+या_अगर (अंक >= 80) {
+    लिखो("Grade: A (Excellent)")
+}
+या_अगर (अंक >= 70) {
+    लिखो("Grade: B+ (Good)")
+}
+अन्यथा {
+    लिखो("Grade: Review Needed")
+}

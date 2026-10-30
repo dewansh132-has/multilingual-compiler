@@ -1,0 +1,21 @@
+వ్యాఖ్య Multilingual Prime Number Checker Logic
+అనుకో target_prime = 97
+मानो is_prime = 1
+let divider = 2
+
+print("Checking Prime Status...")
+
+ఉన్నంతవరకు (divider < target_prime) {
+    अगर (target_prime % divider == 0) {
+        मानो is_prime = 0
+        ఆపు
+    }
+    let divider = divider + 1
+}
+
+ఒకవేళ (is_prime == 1) {
+    लिखो("Number is Prime!")
+}
+अन्यथा {
+    రాయి("Number is not Prime.")
+}

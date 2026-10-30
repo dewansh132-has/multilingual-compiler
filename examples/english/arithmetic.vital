@@ -1,0 +1,16 @@
+// English: Arithmetic Operations
+let a = 25
+let b = 15
+let sum = a + b
+let diff = a - b
+let prod = a * b
+let quot = a / b
+
+print("Sum:")
+print(sum)
+print("Difference:")
+print(diff)
+print("Product:")
+print(prod)
+print("Quotient:")
+print(quot)

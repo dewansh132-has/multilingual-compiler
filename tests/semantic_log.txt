@@ -1,0 +1,5 @@
+--- SEMANTIC ANALYSIS REPORT ---
+
+[ERROR] Line 35: Identifier 'eval' referenced before explicit local assignment.
+
+Symbols extracted: 12

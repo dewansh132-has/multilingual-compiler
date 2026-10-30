@@ -1,0 +1,23 @@
+टिप्पणी_गर Corporate Tax Bracket Calculator
+मान income = 750000
+मान tax_rate = 0
+
+छाप("Calculating Tax Bracket for Income:")
+छाप(income)
+
+यदि_हो (income <= 250000) {
+    मान tax_rate = 0
+    छाप("Tax: 0%")
+}
+नत्र_यदि (income <= 500000) {
+    मान tax_rate = 5
+    छाप("Tax: 5%")
+}
+नत्र_यदि (income <= 1000000) {
+    मान tax_rate = 20
+    छाप("Tax: 20%")
+}
+नत्र {
+    मान tax_rate = 30
+    छाप("Tax: 30%")
+}

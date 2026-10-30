@@ -1,0 +1,15 @@
+टिप्पणी Filtering Odd Numbers only
+मानो गिनती = 0
+
+लिखो("Extracting Odd Numbers...")
+
+while (गिनती < 15) {
+    मानो गिनती = गिनती + 1
+    
+    अगर (गिनती % 2 == 0) {
+        continue
+    }
+    
+    लिखो("Found Odd Number:")
+    लिखो(गिनती)
+}
