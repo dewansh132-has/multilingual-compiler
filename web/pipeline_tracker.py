@@ -486,6 +486,19 @@ class PipelineRunTracker:
 
         self.emit_event("pipeline_paused", paused_stage, payload)
         self.emit_event("pipeline_finish", None, payload)
+        try:
+            from web.fixflow_logger import log_compile_event
+            log_compile_event(
+                run_id=self.run_id,
+                source_revision=self.source_revision,
+                source_hash=getattr(self, "source_hash", "") or "",
+                language=self.artifacts.get("detected_language", "") if self.artifacts else "",
+                stages=self.stages,
+                final_status="paused",
+                duration_ms=total_ms
+            )
+        except Exception:
+            pass
 
     def finish_pipeline(self, status: str, summary: str, final_artifacts: Dict[str, Any]):
         self.end_time = time.time()
@@ -500,6 +513,19 @@ class PipelineRunTracker:
             "total_duration_ms": total_ms,
             "artifacts": final_artifacts
         })
+        try:
+            from web.fixflow_logger import log_compile_event
+            log_compile_event(
+                run_id=self.run_id,
+                source_revision=self.source_revision,
+                source_hash=getattr(self, "source_hash", "") or "",
+                language=final_artifacts.get("detected_language", "") if final_artifacts else "",
+                stages=self.stages,
+                final_status=status,
+                duration_ms=total_ms
+            )
+        except Exception:
+            pass
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes current tracker state into dictionary."""

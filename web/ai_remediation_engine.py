@@ -959,6 +959,22 @@ class AIRemediationEngine:
                     planned_fixes = parsed.get("planned_fixes", [])
                     safety_assessment = parsed.get("safety_assessment", "Combined fix verified against VITAL grammar.")
 
+
+                    try:
+                        from web.fixflow_logger import register_fix_generation
+                        prompt_sz = len(system_prompt) + len(user_prompt)
+                        register_fix_generation(
+                            file_path=file_path,
+                            stage_id=stage_id,
+                            model_name=selected_model,
+                            prompt_size_chars=prompt_sz,
+                            latency_ms=round((time.time() - overall_start_time) * 1000, 2),
+                            patch_diff=cls.generate_diff(source_code, proposed_source, os.path.basename(file_path or "source.vital")),
+                            proposed_source=proposed_source,
+                            original_source=source_code
+                        )
+                    except Exception:
+                        pass
                     if proposed_source and proposed_source != source_code and len(proposed_source.splitlines()) >= max(3, len(source_code.splitlines()) - 10):
                         val_start = time.time()
                         val_ok, _ = StageValidator.validate_stage(stage_id, proposed_source, effective_language)
@@ -1187,6 +1203,29 @@ class AIRemediationEngine:
             expected_revision=expected_revision,
             label=f"Applied AI correction for {finding_id}"
         )
+        # Temporary diagnostic logging to logs/fixflow.log
+        try:
+            from web.fixflow_logger import log_fix_event, _LAST_FIX_METADATA
+            from web.pipeline_tracker import execute_pipeline_with_tracker
+            meta = _LAST_FIX_METADATA.get(file_path, _LAST_FIX_METADATA.get("default", {}))
+            t_before = execute_pipeline_with_tracker(curr.get("code", ""), language, run_ai_security=False, pause_on_error=True)
+            t_after = execute_pipeline_with_tracker(proposed_source, language, run_ai_security=False, pause_on_error=True)
+            diff_patch = cls.generate_diff(curr.get("code", ""), proposed_source, os.path.basename(file_path))
+            log_fix_event(
+                revision_before=active_rev,
+                revision_after=save_res.get("source_revision", active_rev + 1),
+                target_stage=stage_id,
+                model_name=meta.get("model_name", "qwen2.5-coder"),
+                prompt_size_chars=meta.get("prompt_size_chars", 0),
+                latency_ms=meta.get("latency_ms", round((time.time() - t0) * 1000, 2)),
+                patch_diff=diff_patch,
+                stages_before=t_before.stages,
+                stages_after=t_after.stages,
+                action="APPLY FIX",
+                file_path=file_path
+            )
+        except Exception as e:
+            print(f"[Fixflow Apply Hook Error]: {e}")
         if not save_res.get("success"):
             return {
                 "success": False,

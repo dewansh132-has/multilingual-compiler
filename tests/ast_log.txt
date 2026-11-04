@@ -2,25 +2,211 @@
 
 Module (Root)
 ├── Assign
-│   ├── Name (id='x')
+│   ├── Name (id='ప్రస్తుత_సెషన్_వినియోగదారుడు')
 │   │   └── Store
-│   └── Constant (value=10)
+│   └── Constant (value=1042)
 ├── Assign
-│   ├── Name (id='y')
+│   ├── Name (id='ప్రస్తుత_సెషన్_టోకెన్')
 │   │   └── Store
-│   └── Constant (value=20)
+│   └── Constant (value='sess_live_token_77a9b')
 ├── Assign
-│   ├── Name (id='sum')
+│   ├── Name (id='ప్రామాణీకరించబడింది')
 │   │   └── Store
-│   └── BinOp
-│       ├── Name (id='x')
+│   └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
+│   └── If
+│       ├── Compare
+│       │   ├── Name (id='టోకెన్')
+│       │   │   └── Load
+│       │   ├── Eq
+│       │   └── Constant (value='sess_live_token_77a9b')
+│       ├── Return
+│       │   └── Constant (value=1)
+│       └── Return
+│           └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='సక్రియంగా_ఉందా')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='హెచ్చరిక: ఖాతా ప్రస్తుతం నిలిపివేయబడింది.')
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   └── arg
+│   ├── Assign
+│   │   ├── Name (id='సెషన్_సరి')
+│   │   │   └── Store
+│   │   └── Call
+│   │       ├── Name (id='సెషన్_ధృవీకరించు')
+│   │       │   └── Load
+│   │       └── Name (id='ప్రస్తుత_సెషన్_టోకెన్')
+│   │           └── Load
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='సెషన్_సరి')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='యాక్సెస్ తిరస్కరించబడింది: చెల్లని సెషన్ టోకెన్.')
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='వినియోగదారుని కోసం సెషన్ ధృవీకరించబడింది:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='కాలర్_ఐడి')
+│   │           └── Load
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='మొత్తం')
+│   │   │   │   └── Load
+│   │   │   ├── Gt
+│   │   │   └── Constant (value=500)
+│   │   ├── Assign
+│   │   │   ├── Name (id='స్థితి_సరి')
+│   │   │   │   └── Store
+│   │   │   └── Call
+│   │   │       ├── Name (id='ఖాతా_స్థితి_తనిఖీ')
+│   │   │       │   └── Load
+│   │   │       ├── Name (id='మూల_ఖాతా')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value=0)
+│   │   ├── If
+│   │   │   ├── Compare
+│   │   │   │   ├── Name (id='స్థితి_సరి')
+│   │   │   │   │   └── Load
+│   │   │   │   ├── Eq
+│   │   │   │   └── Constant (value=0)
+│   │   │   ├── Expr
+│   │   │   │   └── Call
+│   │   │   │       ├── Name (id='print')
+│   │   │   │       │   └── Load
+│   │   │   │       └── Constant (value='బదిలీ నిరోధించబడింది: మూల ఖాతా సస్పెండ్ చేయబడింది.')
+│   │   │   └── Return
+│   │   │       └── Constant (value=0)
+│   │   └── Expr
+│   │       └── Call
+│   │           ├── Name (id='print')
+│   │           │   └── Load
+│   │           └── Constant (value='చిన్న మొత్తం కోసం సస్పెన్షన్ తనిఖీ దాటవేయబడింది.')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='బదిలీ మొత్తం ప్రారంభించబడుతోంది:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='మొత్తం')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='నిధులు విజయవంతంగా బదిలీ చేయబడ్డాయి:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='లక్ష్య_ఖాతా')
+│   │           └── Load
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='నిర్ధారణ_కోడ్')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=9999)
+│   │   ├── Assign
+│   │   │   ├── Name (id='ఖాతా_మూసివేయబడింది')
+│   │   │   │   └── Store
+│   │   │   └── Constant (value=1)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='ఖాతా విజయవంతంగా మూసివేయబడింది:')
+│   │   ├── Assign
+│   │   │   ├── Name (id='ఖాతా_ముగింపు_స్థితి')
+│   │   │   │   └── Store
+│   │   │   └── Constant (value=1)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Name (id='ఖాతా_ముగింపు_స్థితి')
+│   │   │           └── Load
+│   │   └── Return
+│   │       └── Constant (value=1)
+│   └── Return
+│       └── Constant (value=0)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
 │       │   └── Load
-│       ├── Add
-│       └── Name (id='y')
-│           └── Load
+│       └── Constant (value='=== VITAL భద్రతా ప్రయోగశాల: ఖాతా & అనుమతుల నిర్వహణ ===')
+├── Assign
+│   ├── Name (id='లక్ష్య_ఖాతా_ఐడి')
+│   │   └── Store
+│   └── Constant (value=5001)
+├── Assign
+│   ├── Name (id='బాధితుని_ఖాతా_ఐడి')
+│   │   └── Store
+│   └── Constant (value=9002)
+├── Assign
+│   ├── Name (id='ఫలితం')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='నిధులు_బదిలీ_చేయి')
+│       │   └── Load
+│       ├── Name (id='ప్రస్తుత_సెషన్_వినియోగదారుడు')
+│       │   └── Load
+│       ├── Name (id='బాధితుని_ఖాతా_ఐడి')
+│       │   └── Load
+│       ├── Name (id='లక్ష్య_ఖాతా_ఐడి')
+│       │   └── Load
+│       └── Constant (value=250)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='బదిలీ స్థితి కోడ్:')
 └── Expr
     └── Call
         ├── Name (id='print')
         │   └── Load
-        └── Name (id='sum')
+        └── Name (id='ఫలితం')
             └── Load
