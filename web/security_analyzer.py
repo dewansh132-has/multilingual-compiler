@@ -1241,9 +1241,13 @@ class SecurityAnalysisCoordinator:
         rule_id: str,
         line_no: Any,
         evidence: str,
-        language: str
+        language: str,
+        model: str = ""
     ) -> str:
-        raw = f"{source_code.strip()}|{finding_id}|{rule_id}|{line_no}|{evidence.strip()}|{language.lower()}"
+        import unicodedata
+        norm_src = unicodedata.normalize("NFC", source_code).replace("\r\n", "\n").replace("\r", "\n")
+        src_rev_hash = hashlib.sha256(norm_src.encode("utf-8")).hexdigest()
+        raw = f"{src_rev_hash}|{finding_id}|{rule_id}|{line_no}|{evidence.strip()}|{model}|{language.lower()}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     def generate_deterministic_fix(
@@ -1807,7 +1811,7 @@ class SecurityAnalysisCoordinator:
         title = finding_data.get("title", "")
         rule_id = finding_data.get("rule_id", "")
 
-        cache_key = self._compute_cache_key(source_code, finding_id, rule_id, line_no, evidence, language)
+        cache_key = self._compute_cache_key(source_code, finding_id, rule_id, line_no, evidence, language, model=getattr(self, 'active_model', ''))
         if not request_ai and cache_key in self._fix_cache:
             cached = dict(self._fix_cache[cache_key])
             cached["cached"] = True

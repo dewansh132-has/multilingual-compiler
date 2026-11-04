@@ -456,7 +456,7 @@ class OllamaClient:
                     return {
                         "success": False,
                         "content": "",
-                        "error": f"Payload size ({len(payload_bytes)} bytes) exceeds limit ({MAX_PAYLOAD_BYTES} bytes)",
+                        "error": f"Payload size ({len(payload_bytes)} bytes) exceeds safety limit ({MAX_PAYLOAD_BYTES} bytes)",
                         "model": target_model
                     }
 

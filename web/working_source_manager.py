@@ -31,20 +31,47 @@ MAX_UNDO_HISTORY = 50
 
 
 def _normalize_rel_path(rel_path: str) -> str:
-    """Normalizes relative path and prevents directory traversal."""
+    """Normalizes relative path and prevents directory traversal. Strips project root if absolute."""
     if not rel_path:
         return ""
+    p = os.path.abspath(rel_path) if os.path.isabs(rel_path) else None
+    if p and os.path.isabs(p):
+        if p.startswith(PROJECT_ROOT):
+            rel_path = os.path.relpath(p, PROJECT_ROOT)
+        else:
+            _, tail = os.path.splitdrive(p)
+            rel_path = tail.lstrip("\\/")
     norm = os.path.normpath(rel_path).replace("\\", "/").lstrip("/")
     if ".." in norm:
         raise ValueError("Directory traversal sequence detected in file path.")
     return norm
 
 
-def _get_storage_paths(rel_path: str) -> Tuple[str, str]:
-    """Returns (working_code_file_path, metadata_json_file_path) inside WORKING_STORE_DIR."""
+def _safe_remove(file_path: str):
+    """Safely removes a file ONLY if it is strictly inside WORKING_STORE_DIR."""
+    if not file_path:
+        return
+    working_store_abs = os.path.abspath(WORKING_STORE_DIR)
+    file_abs = os.path.abspath(file_path)
+    if file_abs.startswith(working_store_abs) and file_abs != working_store_abs and os.path.exists(file_abs):
+        try:
+            os.remove(file_abs)
+        except Exception:
+            pass
+
+
+def _get_storage_paths(rel_path: str, language: str = "") -> Tuple[str, str]:
+    """Returns (working_code_file_path, metadata_json_file_path) inside WORKING_STORE_DIR uniquely keyed by (language, relative path)."""
     norm = _normalize_rel_path(rel_path)
-    target_code_path = os.path.join(WORKING_STORE_DIR, norm)
+    if language:
+        safe_lang = language.strip().lower().replace(" ", "_")
+        target_code_path = os.path.abspath(os.path.join(WORKING_STORE_DIR, safe_lang, norm))
+    else:
+        target_code_path = os.path.abspath(os.path.join(WORKING_STORE_DIR, norm))
     meta_path = target_code_path + ".meta.json"
+    working_store_abs = os.path.abspath(WORKING_STORE_DIR)
+    if not target_code_path.startswith(working_store_abs):
+        raise ValueError(f"Storage path {target_code_path} escapes working copy directory {working_store_abs}")
     return target_code_path, meta_path
 
 
@@ -59,6 +86,52 @@ class WorkingSourceManager:
     def __init__(self, storage_dir: str = WORKING_STORE_DIR):
         self.storage_dir = storage_dir
         os.makedirs(self.storage_dir, exist_ok=True)
+
+    @staticmethod
+    def check_stages_1_to_10(code: str, language: str = "") -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """
+        Compiles source code through stages 1-10 in memory without disk mutations.
+        Returns: (passed: bool, failed_stage_id: str, stage_details: dict)
+        """
+        try:
+            from web.pipeline_tracker import execute_pipeline_with_tracker
+            tracker = execute_pipeline_with_tracker(
+                code,
+                language_hint=language or "auto",
+                run_ai_security=False,
+                pause_on_error=True
+            )
+            stages_1_to_10 = [
+                "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+                "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+                "code_generation", "code_validation"
+            ]
+            for sid in stages_1_to_10:
+                st = tracker.stages.get(sid, {})
+                if st.get("status") not in ("completed", "passed", "warning"):
+                    return False, sid, st.get("details", {})
+            return True, "", {}
+        except Exception as e:
+            return False, "compiler_exception", {"error": str(e)}
+
+    def clear_all_working_copies(self) -> Dict[str, Any]:
+        """Deletes all working copies in WORKING_STORE_DIR."""
+        count = 0
+        if os.path.exists(self.storage_dir):
+            for root, dirs, files in os.walk(self.storage_dir, topdown=False):
+                for f in files:
+                    try:
+                        os.remove(os.path.join(root, f))
+                        count += 1
+                    except Exception:
+                        pass
+                for d in dirs:
+                    try:
+                        os.rmdir(os.path.join(root, d))
+                    except Exception:
+                        pass
+        return {"success": True, "deleted_count": count, "message": f"Deleted {count} working copy file(s)."}
+
 
     def get_original_source(self, rel_path: str) -> Tuple[bool, str, str]:
         """
@@ -78,10 +151,12 @@ class WorkingSourceManager:
         except Exception as e:
             return False, "", str(e)
 
-    def get_working_source(self, rel_path: str) -> Dict[str, Any]:
+    def get_working_source(self, rel_path: str, language: str = "") -> Dict[str, Any]:
         """
-        Retrieves the active working source. If a persisted working copy exists,
-        returns it; otherwise falls back to the pristine original file.
+        Retrieves active working source with validation:
+        1. If pristine file has changed since working copy was saved, discards working copy.
+        2. If working copy fails stages 1-10 but pristine passes (or pristine fails on same issue),
+           discards corrupted working copy automatically and returns notice.
         """
         norm = _normalize_rel_path(rel_path)
         ok, original_code, err = self.get_original_source(norm)
@@ -92,7 +167,12 @@ class WorkingSourceManager:
                 "file_path": norm
             }
 
-        code_path, meta_path = _get_storage_paths(norm)
+        orig_hash = _compute_hash(original_code)
+        code_path, meta_path = _get_storage_paths(norm, language)
+        if not os.path.exists(code_path) and language:
+            fallback_code_path, fallback_meta_path = _get_storage_paths(norm, "")
+            if os.path.exists(fallback_code_path):
+                code_path, meta_path = fallback_code_path, fallback_meta_path
 
         # Check if working copy exists
         if os.path.exists(code_path) and os.path.isfile(code_path):
@@ -105,9 +185,61 @@ class WorkingSourceManager:
                     with open(meta_path, "r", encoding="utf-8") as f:
                         meta = json.load(f)
 
-                content_hash = _compute_hash(working_code)
-                orig_hash = _compute_hash(original_code)
+                # Requirement B3: If pristine file changed since working copy was created, discard it
+                stored_orig_sha = meta.get("pristine_sha256")
+                if stored_orig_sha and stored_orig_sha != orig_hash:
+                    _safe_remove(code_path)
+                    _safe_remove(meta_path)
+                    return {
+                        "success": True,
+                        "file_path": norm,
+                        "code": original_code,
+                        "working_code": original_code,
+                        "working_source": original_code,
+                        "original_code": original_code,
+                        "original_source": original_code,
+                        "source_revision": 1,
+                        "content_hash": orig_hash,
+                        "is_dirty": False,
+                        "is_modified": False,
+                        "has_working_copy": False,
+                        "last_saved": None,
+                        "undo_count": 0,
+                        "can_undo": False,
+                        "corrupted_discarded": True,
+                        "notice": "Working copy discarded because pristine demo changed"
+                    }
 
+                # Requirement B2: Compile working copy through stages 1-10 in memory
+                wc_lang = language or meta.get("language", "")
+                wc_passed, wc_fail_stage, _ = self.check_stages_1_to_10(working_code, wc_lang)
+                if not wc_passed:
+                    pr_passed, pr_fail_stage, _ = self.check_stages_1_to_10(original_code, wc_lang)
+                    if pr_passed or (pr_fail_stage != wc_fail_stage):
+                        # Discard corrupted working copy automatically!
+                        _safe_remove(code_path)
+                        _safe_remove(meta_path)
+                        return {
+                            "success": True,
+                            "file_path": norm,
+                            "code": original_code,
+                            "working_code": original_code,
+                            "working_source": original_code,
+                            "original_code": original_code,
+                            "original_source": original_code,
+                            "source_revision": 1,
+                            "content_hash": orig_hash,
+                            "is_dirty": False,
+                            "is_modified": False,
+                            "has_working_copy": False,
+                            "last_saved": None,
+                            "undo_count": 0,
+                            "can_undo": False,
+                            "corrupted_discarded": True,
+                            "notice": "Corrupted working copy discarded"
+                        }
+
+                content_hash = _compute_hash(working_code)
                 return {
                     "success": True,
                     "file_path": norm,
@@ -130,7 +262,6 @@ class WorkingSourceManager:
                 pass
 
         # No working copy yet — pristine original is the source of truth
-        orig_hash = _compute_hash(original_code)
         return {
             "success": True,
             "file_path": norm,
@@ -154,12 +285,12 @@ class WorkingSourceManager:
         rel_path: str,
         code: str,
         expected_revision: Optional[int] = None,
-        label: str = ""
+        label: str = "",
+        language: str = ""
     ) -> Dict[str, Any]:
         """
         Persists a modified working source safely to disk in WORKING_STORE_DIR.
-        Pushes the previous version to undo history.
-        Original files in examples/ and src/ are untouched.
+        Requirement B1: Persists ONLY after patched source passes stages 1-10 in memory.
         """
         try:
             norm = _normalize_rel_path(rel_path)
@@ -170,7 +301,16 @@ class WorkingSourceManager:
             if not ok:
                 return {"success": False, "error": err}
 
-            code_path, meta_path = _get_storage_paths(norm)
+            # Requirement B1: Compile in memory first through stages 1-10
+            val_ok, failed_stage, _ = self.check_stages_1_to_10(code, language)
+            if not val_ok:
+                return {
+                    "success": False,
+                    "error": f"Working copy rejected: Patched code failed stage '{failed_stage}'. Previous source retained.",
+                    "file_path": norm
+                }
+
+            code_path, meta_path = _get_storage_paths(norm, language)
             os.makedirs(os.path.dirname(code_path), exist_ok=True)
 
             current_working = None
@@ -218,6 +358,8 @@ class WorkingSourceManager:
 
             meta["source_revision"] = new_rev
             meta["content_hash"] = new_hash
+            meta["pristine_sha256"] = orig_hash
+            meta["language"] = language
             meta["last_saved"] = now
             meta["is_dirty"] = (new_hash != orig_hash)
 
@@ -325,16 +467,8 @@ class WorkingSourceManager:
                 return {"success": False, "error": err}
 
             code_path, meta_path = _get_storage_paths(norm)
-            if os.path.exists(code_path):
-                try:
-                    os.remove(code_path)
-                except Exception:
-                    pass
-            if os.path.exists(meta_path):
-                try:
-                    os.remove(meta_path)
-                except Exception:
-                    pass
+            _safe_remove(code_path)
+            _safe_remove(meta_path)
 
             orig_hash = _compute_hash(original_code)
             return {

@@ -128,8 +128,14 @@ class Compiler:
         log_path = os.path.join(output_dir, PARSER_FILE)
         
         # CONTRIBUTION 1: Consume structured token stream for syntax validation
-        self.run_lexer(source_code)
-        tokens = self.last_token_stream
+        try:
+            self.run_lexer(source_code)
+            tokens = self.last_token_stream
+        except Exception as e:
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(f"--- PARSER VALIDATION REPORT ---\n\n[ERROR] Lexical error: {e}\n")
+            print(f"> Parser Failed. Check {PARSER_FILE}")
+            return False
 
         with open(log_path, "w", encoding="utf-8") as f:
             f.write("--- PARSER VALIDATION REPORT ---\n\n")
@@ -149,11 +155,16 @@ class Compiler:
             stack = []
             unmatched_close = []
             mismatches = []
+            unclosed = []
 
             for t in tokens:
                 if t.type == TokenType.DELIMITER:
                     if t.lexeme in OPEN_DELIMS:
-                        stack.append(t)
+                        # Detect duplicate consecutive open delimiter on same line (e.g. '{{')
+                        if stack and stack[-1].lexeme == t.lexeme and stack[-1].line == t.line:
+                            unclosed.append(t)
+                        else:
+                            stack.append(t)
                     elif t.lexeme in CLOSE_DELIMS:
                         expected_open = DELIM_PAIRS[t.lexeme]
                         if not stack:
@@ -164,7 +175,7 @@ class Compiler:
                         else:
                             stack.pop()
 
-            unclosed = stack
+            unclosed.extend(stack)
             has_delimiter_error = False
 
             if unmatched_close or mismatches or unclosed:

@@ -42,6 +42,12 @@
             <span id="run-btn-text">Run</span>
           </button>
 
+          <!-- FINAL REPORT BUTTON (Task A) -->
+          <button id="btn-final-report" class="btn btn-secondary" title="View or Generate Pipeline Final Report" disabled style="font-weight: 600;">
+            <span id="final-report-btn-icon">📊</span>
+            <span>Final Report</span>
+          </button>
+
           <!-- AI ASSISTANT BUTTON -->
           <button id="btn-ai-assistant" class="btn btn-ai-toolbar" title="Open AI Assistant Panel">
             <span class="btn-ai-icon">🤖</span>
@@ -72,6 +78,11 @@
           <!-- Reset to original -->
           <button id="btn-reset" class="btn btn-secondary" title="Reset current editor code to original demo">
             <span>⟳ Reset</span>
+          </button>
+
+          <!-- Delete all working copies (Task B) -->
+          <button id="btn-clear-all-copies" class="btn btn-secondary" title="Delete all working copies and reset all demos to pristine original">
+            <span>🗑 Clear All Copies</span>
           </button>
 
           <!-- Clear Output -->
@@ -232,6 +243,8 @@
           <!-- Tab 2: Full Aggregated Pipeline Report -->
           <div class="output-tab-content" id="tab-out-pipeline">
             <div class="pipeline-report-actions-bar" id="pipeline-report-actions-bar" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" id="btn-export-report-html" title="Export Final Report as HTML">📄 Export HTML</button>
+              <button class="btn btn-secondary btn-sm" id="btn-export-report-json" title="Export Final Report as JSON">📦 Export JSON</button>
               <button class="btn btn-primary btn-sm" id="btn-pipeline-save-corrected" title="Save corrected code as a new file">💾 Save Corrected Code</button>
               <button class="btn btn-secondary btn-sm" id="btn-pipeline-restore-original" title="Restore original educational demo">↺ Restore Original</button>
             </div>

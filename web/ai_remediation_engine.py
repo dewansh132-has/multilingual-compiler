@@ -21,6 +21,8 @@ import ast
 import json
 import time
 import difflib
+import unicodedata
+import hashlib
 from typing import Dict, Any, List, Optional, Tuple, Set
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -34,6 +36,112 @@ from lexer import TokenType, Token
 from web.ollama_client import ollama_client
 from web.language_context import VitalLanguageIntelligence, language_intelligence
 from web.working_source_manager import working_source_manager
+
+# Sanitization & Patch Validation Helpers (Task C)
+VITAL_BUILTINS = {
+    "eval", "exec", "open", "compile", "__import__", "globals", "locals",
+    "vars", "dir", "getattr", "setattr", "delattr", "hasattr", "id", "type"
+}
+
+def sanitize_llm_code(text: str) -> str:
+    """Sanitizes LLM code response: strips BOM, normalizes to NFC & LF, removes markdown fences and outer prose."""
+    if not text:
+        return ""
+    if text.startswith("\ufeff"):
+        text = text[1:]
+    text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
+    fence_pattern = r'```(?:[a-zA-Z0-9_\-\+]*\n)?([\s\S]*?)```'
+    m = re.search(fence_pattern, text)
+    if m:
+        text = m.group(1)
+    return text.strip() + "\n"
+
+def sanitize_llm_json(text: str) -> str:
+    """Sanitizes LLM json response: strips BOM, normalizes to NFC & LF, removes markdown fences."""
+    if not text:
+        return ""
+    if text.startswith("\ufeff"):
+        text = text[1:]
+    text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n").strip()
+    m = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+    if m:
+        text = m.group(1).strip()
+    return text
+
+def validate_ai_patch(original_code: str, proposed_code: str, language: str) -> Tuple[bool, str]:
+    """
+    Task C Requirement 2: Rejects any AI patch that:
+    1. Introduces keywords from a different language than the file's selected language.
+    2. Introduces builtin shadowing (e.g. 'let eval', 'function eval') or assignments to builtins.
+    """
+    if not proposed_code:
+        return False, "Proposed code is empty"
+
+    # 1. Builtin shadowing or assignments
+    decl_pattern = r'\b(?:let|var|make|const|मानो|मान_दो|नियत|అనుకో|తీసుకో|స్థిరం|ধরো|স্থির|घ्या|ठरवा|राख|स्थिर_गर)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b'
+    for match in re.finditer(decl_pattern, proposed_code):
+        var_name = match.group(1)
+        if var_name in VITAL_BUILTINS:
+            return False, f"Builtin shadowing detected ('let {var_name}')"
+
+    func_pattern = r'\b(?:function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b'
+    for match in re.finditer(func_pattern, proposed_code):
+        fn_name = match.group(1)
+        if fn_name in VITAL_BUILTINS:
+            return False, f"Builtin function shadowing detected ('function {fn_name}')"
+
+    for b in VITAL_BUILTINS:
+        assign_pat = rf'\b{b}\s*=(?!=)'
+        if re.search(assign_pat, proposed_code) and not re.search(assign_pat, original_code):
+            return False, f"Assignment to builtin '{b}' detected"
+
+    # 2. Check for keywords from a different language
+    norm_lang = (language or "English").capitalize()
+    ENGLISH_CORE_KEYWORDS = {
+        "let", "function", "def", "return", "if", "else", "elif", "while",
+        "print", "input", "const", "for", "break", "continue"
+    }
+
+    def _has_script(txt, script):
+        if script == "Telugu":
+            return any(0x0C00 <= ord(ch) <= 0x0C7F for ch in txt)
+        if script == "Bengali":
+            return any(0x0980 <= ord(ch) <= 0x09FF for ch in txt)
+        if script in ("Hindi", "Marathi", "Nepali", "Devanagari"):
+            return any(0x0900 <= ord(ch) <= 0x097F for ch in txt)
+        return False
+
+    if norm_lang in ("Hindi", "Telugu", "Bengali", "Marathi", "Nepali"):
+        words_prop = set(re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', proposed_code))
+        words_orig = set(re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', original_code))
+        introduced_en = (words_prop - words_orig) & ENGLISH_CORE_KEYWORDS
+        if introduced_en:
+            return False, f"Patch introduces English keyword(s) {introduced_en} into {norm_lang} program"
+
+        if norm_lang == "Telugu":
+            if _has_script(proposed_code, "Bengali") and not _has_script(original_code, "Bengali"):
+                return False, "Patch introduces Bengali script into Telugu program"
+            if _has_script(proposed_code, "Devanagari") and not _has_script(original_code, "Devanagari"):
+                return False, "Patch introduces Devanagari script into Telugu program"
+        elif norm_lang == "Bengali":
+            if _has_script(proposed_code, "Telugu") and not _has_script(original_code, "Telugu"):
+                return False, "Patch introduces Telugu script into Bengali program"
+            if _has_script(proposed_code, "Devanagari") and not _has_script(original_code, "Devanagari"):
+                return False, "Patch introduces Devanagari script into Bengali program"
+        elif norm_lang in ("Hindi", "Marathi", "Nepali"):
+            if _has_script(proposed_code, "Telugu") and not _has_script(original_code, "Telugu"):
+                return False, f"Patch introduces Telugu script into {norm_lang} program"
+            if _has_script(proposed_code, "Bengali") and not _has_script(original_code, "Bengali"):
+                return False, f"Patch introduces Bengali script into {norm_lang} program"
+    elif norm_lang == "English":
+        if _has_script(proposed_code, "Telugu") and not _has_script(original_code, "Telugu"):
+            return False, "Patch introduces Telugu script into English program"
+        if _has_script(proposed_code, "Bengali") and not _has_script(original_code, "Bengali"):
+            return False, "Patch introduces Bengali script into English program"
+        if _has_script(proposed_code, "Devanagari") and not _has_script(original_code, "Devanagari"):
+            return False, "Patch introduces Devanagari script into English program"
+
+    return True, ""
 
 # VITAL Comment prefixes across all supported Indic and English languages
 COMMENT_PREFIXES = (
@@ -661,7 +769,9 @@ class AIRemediationEngine:
                 f"Please produce a strictly valid VITAL correction that eliminates this error without introducing regressions."
             )
 
-        cache_key = f"{hash(source_code)}_{finding_id}_{model_name}"
+        norm_src = unicodedata.normalize("NFC", source_code).replace("\r\n", "\n").replace("\r", "\n")
+        src_rev_hash = hashlib.sha256(norm_src.encode("utf-8")).hexdigest()
+        cache_key = f"{src_rev_hash}_{finding_id}_{model_name}_{(effective_language or 'English').lower()}"
 
         # Bounded attempt loop
         current_user_prompt = user_prompt
@@ -683,7 +793,7 @@ class AIRemediationEngine:
                 if not res.get("success"):
                     break
 
-                raw_json = res.get("content", "").strip()
+                raw_json = sanitize_llm_json(res.get("content", ""))
                 parsed = json.loads(raw_json)
 
                 # Extract Structured Response Fields as required by the specification
@@ -696,7 +806,7 @@ class AIRemediationEngine:
                 reason = parsed.get("reason", explanation)
                 potential_side_effects = parsed.get("potential_side_effects", "None detected. Minimal surgical change preserves program structure.")
                 validation_requirements = parsed.get("validation_requirements", f"Compiler {stage_id.upper()} stage validation.")
-                proposed_source = parsed.get("proposed_source", "").strip()
+                proposed_source = sanitize_llm_code(parsed.get("proposed_source", ""))
                 safety_assessment = parsed.get("safety_assessment", "Safe minimal modification verified against VITAL grammar.")
 
                 # Construct Candidate Source
@@ -714,6 +824,28 @@ class AIRemediationEngine:
 
                 if not candidate_source or candidate_source == source_code:
                     continue
+
+                # Patch language & builtin shadowing validation (Task C)
+                patch_ok, patch_err = validate_ai_patch(source_code, candidate_source, effective_language)
+                if not patch_ok:
+                    det_fix = cls.generate_deterministic_fix(
+                        source_code=source_code,
+                        stage_id=stage_id,
+                        finding_id=finding_id,
+                        finding_data=finding_data,
+                        language=effective_language
+                    )
+                    if det_fix and det_fix.get("success"):
+                        return det_fix
+                    return {
+                        "success": False,
+                        "status": "needs manual fix",
+                        "error": f"needs manual fix: {patch_err}",
+                        "stage_id": stage_id,
+                        "finding_id": finding_id,
+                        "source_revision": source_revision,
+                        "file_path": file_path
+                    }
 
                 # Multi-Tier Validation across all prerequisite compiler stages
                 val_start = time.time()
@@ -951,9 +1083,18 @@ class AIRemediationEngine:
                 )
 
                 if res.get("success"):
-                    raw_json = res.get("content", "").strip()
+                    raw_json = sanitize_llm_json(res.get("content", ""))
                     parsed = json.loads(raw_json)
-                    proposed_source = parsed.get("proposed_source", "").strip()
+                    proposed_source = sanitize_llm_code(parsed.get("proposed_source", ""))
+                    c_patch_ok, c_patch_err = validate_ai_patch(source_code, proposed_source, effective_language)
+                    if not c_patch_ok:
+                        return {
+                            "success": False,
+                            "status": "needs manual fix",
+                            "error": f"needs manual fix: {c_patch_err}",
+                            "stage_id": stage_id,
+                            "file_path": file_path
+                        }
                     explanation = parsed.get("explanation", f"Ollama applied combined remediation for {len(applicable_diagnostics)} errors in {stage_id}.")
                     root_cause = parsed.get("identified_root_cause") or parsed.get("root_cause", f"Combined analysis of {len(applicable_diagnostics)} issues.")
                     planned_fixes = parsed.get("planned_fixes", [])

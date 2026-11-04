@@ -95,6 +95,10 @@
     btnSave: document.getElementById("btn-save"),
     btnReset: document.getElementById("btn-reset"),
     btnClear: document.getElementById("btn-clear"),
+    btnFinalReport: document.getElementById("btn-final-report"),
+    btnExportReportHtml: document.getElementById("btn-export-report-html"),
+    btnExportReportJson: document.getElementById("btn-export-report-json"),
+    btnClearAllCopies: document.getElementById("btn-clear-all-copies"),
     btnAiAssistant: document.getElementById("btn-ai-assistant"),
     
     // Header badges
@@ -428,6 +432,42 @@
     const pipeRestoreBtn = document.getElementById("btn-pipeline-restore-original");
     if (pipeRestoreBtn) {
       pipeRestoreBtn.addEventListener("click", restoreOriginalDemo);
+    }
+
+    if (elements.btnFinalReport) {
+      elements.btnFinalReport.addEventListener("click", () => {
+        if (state.pipeline.pendingArtifacts && state.pipeline.isReportGenerated) {
+          showOutputArtifacts(state.pipeline.pendingArtifacts);
+          switchOutputTab("tab-out-pipeline");
+        } else {
+          generateFinalReport(true);
+        }
+      });
+    }
+
+    if (elements.btnExportReportHtml) {
+      elements.btnExportReportHtml.addEventListener("click", exportReportHtml);
+    }
+    if (elements.btnExportReportJson) {
+      elements.btnExportReportJson.addEventListener("click", exportReportJson);
+    }
+
+    if (elements.btnClearAllCopies) {
+      elements.btnClearAllCopies.addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to delete ALL working copies and reset all demos to original? This action cannot be undone.")) {
+          return;
+        }
+        try {
+          const resp = await fetch("/api/working-copy/clear-all", { method: "POST" });
+          const res = await resp.json();
+          alert(res.message || "All working copies cleared.");
+          if (state.currentFile && state.currentFile.path) {
+            await loadDemoFile(state.currentFile.path);
+          }
+        } catch (err) {
+          alert("Failed to clear working copies: " + err.message);
+        }
+      });
     }
 
     // Modal View Mode Toggles (Unified vs Split)
@@ -821,10 +861,15 @@
         // Security Lab Educational Banner
         setupSecurityBanner(json);
 
-        const statusMsg = isModified
+        let statusMsg = isModified
           ? `Status: Loaded persisted working copy for ${json.filename} (Revision ${state.sourceRevisionId})`
           : `Status: Loaded ${json.filename} (${json.language})`;
-        setStatus(statusMsg, "ready");
+        if (json.corrupted_discarded) {
+          statusMsg = "Corrupted working copy discarded";
+          setStatus(statusMsg, "warning");
+        } else {
+          setStatus(statusMsg, "ready");
+        }
       } else {
         setStatus(`Error: ${json.error}`, "error");
       }
@@ -1003,6 +1048,14 @@
 
   function invalidateAllStagesForNewRevision(newRevision) {
     state.pipeline.isReadyForReport = false;
+    // Task D: Scope state.findingsStore by revision id
+    if (state.findingsStore) {
+      for (const [k, f] of Object.entries(state.findingsStore)) {
+        if (f.revision_id && f.revision_id !== newRevision) {
+          delete state.findingsStore[k];
+        }
+      }
+    }
     state.pipeline.isReportGenerated = false;
     state.pipeline.pendingArtifacts = null;
 
@@ -1151,6 +1204,7 @@
     // Pipeline Paused Event (Blocking Error in Progressive Execution)
     if (evtType === "pipeline_paused") {
       state.pipeline.isPaused = true;
+      if (elements.btnFinalReport) elements.btnFinalReport.disabled = false;
       state.pipeline.pausedStage = event.paused_stage;
       if (elements.pipelineStatusBadge) {
         elements.pipelineStatusBadge.textContent = "PAUSED FOR CORRECTION";
@@ -1174,6 +1228,7 @@
     // Pipeline Finish Event
     if (evtType === "pipeline_finish") {
       const status = event.status || "completed";
+      if (elements.btnFinalReport) elements.btnFinalReport.disabled = false;
       if (event.artifacts) {
         state.pipeline.pendingArtifacts = event.artifacts;
       }
@@ -1220,6 +1275,7 @@
         }
         if (event.artifacts) {
           showOutputArtifacts(event.artifacts);
+          switchOutputTab("tab-out-pipeline"); // Task A: Auto-open final report on completion
           if (event.artifacts.security) {
             renderSecurityFindings(
               event.artifacts.security.findings || [],
@@ -1362,6 +1418,7 @@
           ...f,
           id: fid,
           identifier: f.identifier || "",
+          revision_id: state.sourceRevisionId || 1,
           status: f.status || "open",
           validation_status: f.validation_status || "still_detected"
         };
@@ -1480,7 +1537,7 @@
     return [];
   }
 
-  async function generateFinalReport() {
+  async function generateFinalReport(allowIncomplete = false) {
     const currentCode = state.editor ? state.editor.getValue() : "";
     const lang = state.currentFile ? state.currentFile.language : "English";
 
@@ -1490,8 +1547,7 @@
       return;
     }
 
-    // Check if all required earlier stages passed (Optimization is strictly MANDATORY)
-    const stages = state.pipeline.stages;
+    const stages = state.pipeline.stages || [];
     const stageData = state.pipeline.stageData || {};
     const unpassed = stages.filter(st => {
       if (st.id === "final_report") return false;
@@ -1500,8 +1556,7 @@
     });
 
     if (unpassed.length > 0) {
-      alert(`Cannot generate Final Report: Required stage(s) [${unpassed.map(s => s.name).join(", ")}] have not passed.`);
-      return;
+      allowIncomplete = true;
     }
 
     const btn = document.getElementById("btn-generate-final-report");
@@ -1517,35 +1572,40 @@
         body: JSON.stringify({
           code: currentCode,
           language: lang,
-          run_id: state.pipeline.activeRunId
+          run_id: state.pipeline.activeRunId,
+          allow_incomplete: allowIncomplete
         })
       });
       const res = await resp.json();
       if (res.success) {
         state.pipeline.isReportGenerated = true;
+        state.pipeline.pendingArtifacts = res.artifacts;
         state.pipeline.stageData["final_report"] = {
-          status: "completed",
+          status: res.is_incomplete ? "warning" : "completed",
           duration_ms: res.elapsed_ms || 1,
-          summary: "Final Report generated successfully. All pipeline metrics assembled and output artifacts unlocked.",
+          summary: res.is_incomplete
+            ? "Final Report generated with INCOMPLETE banner. Mandatory compilation stage(s) failed."
+            : "Final Report generated successfully. All pipeline metrics assembled and output artifacts unlocked.",
           details: res
         };
         const node = document.getElementById("step-node-final_report");
         if (node) {
-          node.className = "stepper-step status-completed active-drawer";
+          node.className = res.is_incomplete ? "stepper-step status-warning active-drawer" : "stepper-step status-completed active-drawer";
           const icon = node.querySelector(".stepper-step-icon");
-          if (icon) icon.textContent = "✓";
+          if (icon) icon.textContent = res.is_incomplete ? "⚠" : "✓";
         }
         if (elements.pipelineStatusBadge) {
-          elements.pipelineStatusBadge.textContent = "COMPLETED";
-          elements.pipelineStatusBadge.className = "pipeline-status-badge badge-completed";
+          elements.pipelineStatusBadge.textContent = res.is_incomplete ? "INCOMPLETE" : "COMPLETED";
+          elements.pipelineStatusBadge.className = res.is_incomplete ? "pipeline-status-badge badge-warning" : "pipeline-status-badge badge-completed";
         }
         if (elements.pipelineProgressFill) {
           elements.pipelineProgressFill.style.width = "100%";
         }
 
-        // Show artifacts and switch to program output
+        // Show artifacts and switch to pipeline report tab
         showOutputArtifacts(res.artifacts);
-        setStatus("Status: Compilation Completed | Final Report Generated", "ready");
+        switchOutputTab("tab-out-pipeline");
+        setStatus(res.is_incomplete ? "Status: Final Report Generated (Incomplete)" : "Status: Compilation Completed | Final Report Generated", "ready");
         renderStageDrawer("final_report");
       } else {
         alert(`Report generation blocked: ${res.error || 'Prerequisites not satisfied.'}`);
@@ -1626,8 +1686,8 @@
             </ul>
           </div>
           <div style="margin-top: 12px;">
-            <button class="btn btn-secondary" disabled style="width: 100%; padding: 10px 16px; opacity: 0.6; cursor: not-allowed;">
-              Generate Final Report (Blocked by Incomplete Stages)
+            <button class="btn btn-warning" id="btn-generate-final-report" style="width: 100%; padding: 10px 16px; font-weight: 700; font-size: 13px; background: #D97706; border-color: #B45309; color: #FFF;">
+              📊 Generate Final Report Anyway (Incomplete)
             </button>
           </div>
         </div>
@@ -4092,6 +4152,51 @@
     if (elements.consoleOptimization) elements.consoleOptimization.textContent = "";
     elements.outputTimingBadge.textContent = "0 ms";
     setStatus("Status: Output cleared", "ready");
+  }
+
+  function exportReportHtml() {
+    const reportText = (elements.consolePipeline && elements.consolePipeline.textContent) || "";
+    if (!reportText) {
+      alert("No pipeline report available to export.");
+      return;
+    }
+    const fileName = (state.currentFile ? state.currentFile.filename : "report") + "_audit.html";
+    const htmlDoc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>VITAL Compiler Execution & Audit Report</title>
+  <style>
+    body { font-family: monospace; background: #0F172A; color: #E2E8F0; padding: 24px; line-height: 1.5; }
+    pre { background: #1E293B; padding: 20px; border-radius: 8px; border: 1px solid #334155; overflow-x: auto; white-space: pre-wrap; font-size: 13px; }
+    h1 { color: #38BDF8; font-size: 18px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>VITAL Compiler Pipeline Audit Report</h1>
+  <pre>${escapeHtml(reportText)}</pre>
+</body>
+</html>`;
+    const blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportReportJson() {
+    const artifacts = state.pipeline.pendingArtifacts || {};
+    const fileName = (state.currentFile ? state.currentFile.filename : "report") + "_audit.json";
+    const jsonStr = JSON.stringify(artifacts, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function copyActiveOutput() {

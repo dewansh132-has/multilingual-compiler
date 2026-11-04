@@ -23,6 +23,11 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
 
+class LexerError(ValueError):
+    """Raised when a lexical error is encountered during tokenization."""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Token Type Enumeration
 # ---------------------------------------------------------------------------
@@ -317,6 +322,10 @@ class VitalLexer:
                     tok, col = self._read_word(line, col, line_num)
                     tokens.append(tok)
                     continue
+
+                # --- Stray backtick: lexical error ---
+                if ch == '`':
+                    raise LexerError(f"unexpected backtick at line {line_num}:{col + 1}")
 
                 # --- Unknown character: skip ---
                 col += 1

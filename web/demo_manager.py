@@ -237,13 +237,17 @@ def get_demo_content(relative_path: str) -> Dict[str, Any]:
     try:
         try:
             from web.working_source_manager import working_source_manager
-            ws_data = working_source_manager.get_working_source(norm_rel)
+            lang_hint = detect_file_language("", full_path)
+            ws_data = working_source_manager.get_working_source(norm_rel, language=lang_hint)
             code = ws_data.get("code", "")
             original_code = ws_data.get("original_code", code)
             source_revision = ws_data.get("source_revision", 1)
             content_hash = ws_data.get("content_hash", "")
             is_dirty = ws_data.get("is_dirty", False)
+            is_modified = ws_data.get("is_modified", False)
             undo_count = ws_data.get("undo_count", 0)
+            corrupted_discarded = ws_data.get("corrupted_discarded", False)
+            notice_msg = ws_data.get("notice", "")
         except Exception:
             with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
                 code = f.read()
@@ -251,7 +255,10 @@ def get_demo_content(relative_path: str) -> Dict[str, Any]:
             source_revision = 1
             content_hash = ""
             is_dirty = False
+            is_modified = False
             undo_count = 0
+            corrupted_discarded = False
+            notice_msg = ""
         
         language = detect_file_language(code, full_path)
         filename = os.path.basename(full_path)
@@ -274,7 +281,10 @@ def get_demo_content(relative_path: str) -> Dict[str, Any]:
             "source_revision": source_revision,
             "content_hash": content_hash,
             "is_dirty": is_dirty,
+            "is_modified": is_modified,
             "undo_count": undo_count,
+            "corrupted_discarded": corrupted_discarded if 'corrupted_discarded' in locals() else False,
+            "notice": notice_msg if 'notice_msg' in locals() else "",
             "is_security_lab": reg_entry is not None or "security_lab" in norm_rel.lower(),
         }
         if reg_entry:

@@ -266,6 +266,8 @@ class PipelineRunTracker:
         self.run_id = run_id or str(uuid.uuid4())
         self.source_revision = source_revision
         self.source_hash = source_hash
+        self.applied_fixes: List[str] = []
+        self.file_path: str = ""
         self.start_time = time.time()
         self.end_time: Optional[float] = None
         self.stages: Dict[str, Dict[str, Any]] = {}
@@ -1197,20 +1199,12 @@ def execute_pipeline_with_tracker(
                 "Execution timed out (5s limit). Infinite while-loop detected.",
                 {"output": runner_res.get("output", "")}
             )
-            if pause_on_error:
-                tracker.block_stage("final_report", "Blocked: Sandbox execution timed out.")
-                tracker.pause_pipeline("sandbox_execution", "Execution paused: Sandbox timeout guard triggered (5s limit).")
-                return tracker
         else:
             tracker.fail_stage(
                 "sandbox_execution",
                 f"Runtime Error: {runner_res.get('status_message', 'Execution error')}",
                 {"output": runner_res.get("output", "")}
             )
-            if pause_on_error:
-                tracker.block_stage("final_report", "Blocked: Sandbox execution encountered runtime error.")
-                tracker.pause_pipeline("sandbox_execution", f"Execution paused: Runtime error in sandbox.")
-                return tracker
     else:
         reason = "Blocked because prerequisite stages (Syntax, Mandatory Optimization, or Target Code) failed."
         if pause_on_error:
@@ -1244,7 +1238,8 @@ def execute_pipeline_with_tracker(
         st_name = s.get("name", s.get("id"))
         st_status = s.get("status", "unknown").upper()
         st_summary = s.get("summary", "")
-        stage_summary_lines.append(f"  [{st_status:9s}] {st_name:25s} - {st_summary}")
+        duration_ms = s.get("duration_ms", 0.0)
+        stage_summary_lines.append(f"  [{st_status:9s}] {st_name:25s} ({duration_ms:.2f} ms) - {st_summary}")
 
     passed_count = sum(1 for s in tracker.stages.values() if s.get("status") in ("completed", "passed"))
     warn_count = sum(1 for s in tracker.stages.values() if s.get("status") == "warning")
@@ -1299,7 +1294,10 @@ def execute_pipeline_with_tracker(
         f"• Runtime Output:      tests/output.txt\n\n"
         f"SECTION 10: AI REMEDIATION & SECURITY AUDIT\n"
         f"• Static Findings:     {len(findings)} Issue(s) Detected (Risk Score: {sec_results.get('overall_risk_score', 0)}/100)\n"
-        f"• Ollama AI Status:    {ai_status.get('model', 'qwen2.5-coder:7b-instruct')} ({'Online' if ai_status.get('online') else 'Offline'})\n\n"
+        f"• Ollama AI Status:    {ai_status.get('model', 'qwen2.5-coder:7b-instruct')} ({'Online' if ai_status.get('online') else 'Offline'})\n"
+        + ("\n".join(f"  • Line {f.get('line', 1)}: [{f.get('severity', 'Medium')}] {f.get('cwe_id') or f.get('rule_id', 'CWE-Unknown')} - {f.get('title', '')}" for f in findings) + "\n" if findings else "  • No security issues detected.\n") + "\n"
+        f"SECTION 10B: APPLIED REMEDIATION FIXES\n"
+        f"• Status:              {'None (Pristine demo unmodified)' if not tracker.applied_fixes else f'{len(tracker.applied_fixes)} fix(es) applied'}\n\n"
         f"SECTION 11: FINAL COMPILATION VERDICT\n"
         f"================================================================================\n"
         f"  FINAL STATUS: {'COMPILATION SUCCESSFUL' if final_status == 'completed' else ('COMPILATION COMPLETED WITH WARNINGS' if final_status == 'warning' else 'COMPILATION FAILED')}\n"
@@ -1339,58 +1337,66 @@ def execute_pipeline_with_tracker(
         }
     }
 
-    mandatory_prereqs = [s["id"] for s in STAGE_DEFINITIONS if s["id"] != "final_report"]
-    all_prereqs_passed = all(
+    # Mandatory compilation stages 1-10
+    mandatory_stages_1_to_10 = [
+        "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+        "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+        "code_generation", "code_validation"
+    ]
+    mandatory_1_to_10_passed = all(
         tracker.stages.get(sid, {}).get("status") in ("completed", "passed", "warning") and
         tracker.stages.get(sid, {}).get("source_revision") == tracker.source_revision
-        for sid in mandatory_prereqs
+        for sid in mandatory_stages_1_to_10
     )
 
-    if pause_on_error:
-        if all_prereqs_passed and final_status in ("completed", "warning") and is_opt_passed:
-            tracker.mark_stage_ready(
-                "final_report",
-                "Ready: All required preceding compilation and analysis stages passed. Click Generate Final Report to view artifacts."
-            )
-            tracker.finish_pipeline(
-                "ready_for_report",
-                f"All 13 prerequisite compilation stages verified successfully. Final Report is ready for generation.",
-                final_artifacts
-            )
-        else:
-            unpassed = [
-                s["name"] for s in STAGE_DEFINITIONS
-                if s["id"] != "final_report" and tracker.stages.get(s["id"], {}).get("status") not in ("completed", "passed", "warning")
-            ]
-            tracker.block_stage("final_report", f"Blocked: Mandatory stages not completed: {', '.join(unpassed)}")
-            tracker.finish_pipeline(
-                "failed",
-                f"Pipeline incomplete: Mandatory stage(s) [ {', '.join(unpassed)} ] did not complete successfully.",
-                final_artifacts
-            )
+    # Prepend INCOMPLETE banner if mandatory stages failed
+    failed_mandatory = [
+        (s["name"], tracker.stages.get(s["id"], {}).get("summary", "Did not pass"))
+        for s in STAGE_DEFINITIONS
+        if s["id"] in mandatory_stages_1_to_10 and tracker.stages.get(s["id"], {}).get("status") not in ("completed", "passed", "warning")
+    ]
+    if failed_mandatory:
+        incomplete_banner = (
+            "================================================================================\n"
+            "⚠️  INCOMPLETE COMPILATION REPORT — MANDATORY STAGE FAILURE                     \n"
+            "================================================================================\n"
+            "The following mandatory compilation stage(s) failed or were not completed:\n"
+            + "\n".join(f"  • {name}: {reason}" for name, reason in failed_mandatory) + "\n"
+            "================================================================================\n\n"
+        )
+        final_artifacts["aggregated_log"] = incomplete_banner + final_artifacts["aggregated_log"]
+        final_artifacts["incomplete"] = True
+        final_artifacts["failed_mandatory_stages"] = failed_mandatory
+
+    # Stage 14 executes automatically when mandatory stages 1-10 passed (even with pause_on_error=True)
+    if mandatory_1_to_10_passed:
+        tracker.start_stage("final_report", "Assembling multi-stage compiler artifacts and execution report...")
+        _pace("final_report")
+        tracker.complete_stage(
+            "final_report",
+            "Pipeline report assembled with all diagnostic logs, AST visual, symbol table, and metrics.",
+            {"symbol_table": symbol_table}
+        )
+        tracker.finish_pipeline(
+            final_status,
+            f"Pipeline finished with status '{final_status}' ({tracker.completed_stages_count}/{len(tracker.applicable_stage_ids)} applicable stages completed).",
+            final_artifacts
+        )
     else:
-        if all_prereqs_passed and final_status in ("completed", "warning") and is_opt_passed:
-            tracker.start_stage("final_report", "Assembling multi-stage compiler artifacts and execution report...")
-            _pace("final_report")
-            tracker.complete_stage(
-                "final_report",
-                "Pipeline report assembled with all diagnostic logs, AST visual, symbol table, and metrics.",
-                {"symbol_table": symbol_table}
-            )
-            tracker.finish_pipeline(
-                final_status,
-                f"Pipeline finished with status '{final_status}' ({tracker.completed_stages_count}/{len(tracker.applicable_stage_ids)} applicable stages completed).",
-                final_artifacts
-            )
-        else:
-            unpassed = [
-                s["name"] for s in STAGE_DEFINITIONS
-                if s["id"] != "final_report" and tracker.stages.get(s["id"], {}).get("status") not in ("completed", "passed", "warning")
-            ]
-            tracker.block_stage("final_report", f"Blocked: Mandatory stages not completed: {', '.join(unpassed)}")
-            tracker.finish_pipeline(
-                "failed",
-                f"Pipeline failed: Mandatory stage(s) [ {', '.join(unpassed)} ] did not pass.",
-                final_artifacts
-            )
+        unpassed = [
+            s["name"] for s in STAGE_DEFINITIONS
+            if s["id"] in mandatory_stages_1_to_10 and tracker.stages.get(s["id"], {}).get("status") not in ("completed", "passed", "warning")
+        ]
+        tracker.start_stage("final_report", "Assembling incomplete pipeline report...")
+        _pace("final_report")
+        tracker.complete_stage(
+            "final_report",
+            f"Incomplete report assembled: Mandatory stage(s) [ {', '.join(unpassed)} ] did not complete successfully.",
+            {"symbol_table": symbol_table, "incomplete": True, "unpassed": unpassed}
+        )
+        tracker.finish_pipeline(
+            "failed",
+            f"Pipeline incomplete: Mandatory stage(s) [ {', '.join(unpassed)} ] did not complete successfully.",
+            final_artifacts
+        )
     return tracker

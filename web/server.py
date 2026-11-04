@@ -499,6 +499,19 @@ def security_suggest_fix():
 
     preferred_model = data.get('preferred_model')
 
+    # Fast deterministic rules run first for instant remediation
+    if prefer_deterministic and not request_ai:
+        det_result = security_coordinator.suggest_fix_for_finding(
+            source_code=code,
+            finding_id=finding_id,
+            finding_data=finding_data,
+            language=language,
+            prefer_deterministic=True,
+            request_ai=False
+        )
+        if det_result.get("success") and det_result.get("is_deterministic"):
+            return jsonify(det_result)
+
     # If it is explicitly a compiler stage error (or parser finding), route to remediation_engine
     if stage_id in compiler_stages or str(finding_id).startswith(("SYN-", "SEC-PAR-", "SEM-", "SEC-SEM-", "IR-", "OPT-")):
         from web.ai_remediation_engine import remediation_engine
@@ -811,8 +824,11 @@ def pipeline_generate_report():
     )
 
     t_dict = tracker.to_dict()
-    # Backend-enforced completion guard for all mandatory stages
+    allow_incomplete = bool(data.get("allow_incomplete") or data.get("force") or request.args.get("allow_incomplete"))
+
+    # Backend-enforced completion guard for mandatory stages (1-10)
     mandatory_stages = [
+        ("source_input", "Source Input"),
         ("lexical_analysis", "Lexical Analysis"),
         ("syntax_analysis", "Syntax Analysis"),
         ("ast_construction", "AST Construction"),
@@ -821,20 +837,24 @@ def pipeline_generate_report():
         ("ir_generation", "Intermediate Representation (IR)"),
         ("optimization", "Optimization"),
         ("code_generation", "Code Generation"),
-        ("code_validation", "Target Code Validation"),
-        ("sandbox_execution", "Sandbox Execution")
+        ("code_validation", "Target Code Validation")
     ]
+    failed_mandatory = []
     for m_id, m_name in mandatory_stages:
         st = next((s for s in t_dict["stages"] if s["id"] == m_id), None)
         st_status = st.get("status", "missing") if st else "missing"
         if not st or st_status not in ("completed", "passed", "warning"):
-            return jsonify({
-                "success": False,
-                "error": f"Cannot generate Final Report: Mandatory stage '{m_name}' did not complete successfully (Status: {st_status.upper()}). {m_name} stage failed.",
-                "blocked_stage": m_id,
-                "stage_status": st_status,
-                "details": st.get("details", {}) if st else {}
-            }), 400
+            failed_mandatory.append((m_id, m_name, st_status, st.get("details", {}) if st else {}))
+
+    if failed_mandatory and not allow_incomplete:
+        m_id, m_name, st_status, details = failed_mandatory[0]
+        return jsonify({
+            "success": False,
+            "error": f"Cannot generate Final Report: Mandatory stage '{m_name}' did not complete successfully (Status: {st_status.upper()}). {m_name} stage failed.",
+            "blocked_stage": m_id,
+            "stage_status": st_status,
+            "details": details
+        }), 400
 
     tracker.complete_final_report()
     result = tracker.to_dict()
@@ -844,8 +864,17 @@ def pipeline_generate_report():
         "status": result.get("status"),
         "artifacts": result.get("artifacts"),
         "elapsed_ms": result.get("elapsed_ms"),
-        "stages": result.get("stages")
+        "stages": result.get("stages"),
+        "is_incomplete": bool(failed_mandatory)
     })
+
+
+@app.route('/api/working-copy/clear-all', methods=['POST'])
+def clear_all_working_copies_endpoint():
+    """Backend endpoint to delete all saved working copies."""
+    from web.working_source_manager import working_source_manager
+    res = working_source_manager.clear_all_working_copies()
+    return jsonify(res)
 
 
 def create_app():

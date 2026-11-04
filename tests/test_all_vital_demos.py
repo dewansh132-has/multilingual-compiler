@@ -51,7 +51,7 @@ class TestAllVitalDemos(unittest.TestCase):
         # Discover all 86 .vital files
         cls.all_vital_files = []
         for root, _, files in os.walk(PROJECT_ROOT):
-            if any(p in root for p in [".git", ".venv", "node_modules", ".gemini"]):
+            if any(p in root for p in [".git", ".venv", "node_modules", ".gemini", "working_copies"]):
                 continue
             for f in files:
                 if f.endswith(".vital"):

@@ -1,13 +1,5 @@
 --- SYMBOL TABLE (SEMANTICS) ---
-Variable Name	| Type	| Current Value
+Variable Name	| Type	| Scope	| Line
 --------------------------------------------------
-ప్రస్తుత_సెషన్_వినియోగదారుడు	| int	| 1042
-ప్రస్తుత_సెషన్_టోకెన్	| str	| sess_live_token_77a9b
-ప్రామాణీకరించబడింది	| int	| 1
-సెషన్_ధృవీకరించు	| function	| <function సెషన్_ధృవీకరించు at 0x0000011178FFE980>
-ఖాతా_స్థితి_తనిఖీ	| function	| <function ఖాతా_స్థితి_తనిఖీ at 0x0000011178FFEA30>
-నిధులు_బదిలీ_చేయి	| function	| <function నిధులు_బదిలీ_చేయి at 0x0000011178FFEAE0>
-ఖాతా_మూసివేయి	| function	| <function ఖాతా_మూసివేయి at 0x0000011178FFEB90>
-లక్ష్య_ఖాతా_ఐడి	| int	| 5001
-బాధితుని_ఖాతా_ఐడి	| int	| 9002
-ఫలితం	| int	| 1
+stock	| numeric	| global	| 13
+order_size	| int	| global	| 3

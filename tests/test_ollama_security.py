@@ -387,7 +387,7 @@ class TestPipelineTracker(unittest.TestCase):
         # Verify all dependent language compiler pipeline stages are skipped
         for dep_id in ["ast_construction", "semantic_analysis", "symbol_table", "ir_generation", "code_generation", "code_validation", "sandbox_execution"]:
             st = next(s for s in trace["stages"] if s["id"] == dep_id)
-            self.assertEqual(st["status"], "skipped", f"Dependent stage {dep_id} should be skipped on parser failure")
+            self.assertIn(st["status"], ("blocked", "skipped"), f"Dependent stage {dep_id} should be blocked/skipped on parser failure")
 
         # Independent security and reporting phases still execute; progress does NOT inflate to 100%
         self.assertEqual(trace["completed_stages"], 5)

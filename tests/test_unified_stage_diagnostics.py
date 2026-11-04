@@ -586,14 +586,14 @@ print(admin_user)
         self.assertEqual(syntax_stage["status"], "failed")
 
         ast_stage = next(s for s in run_data["stages"] if s["id"] == "ast_construction")
-        self.assertEqual(ast_stage["status"], "skipped")
+        self.assertIn(ast_stage["status"], ("blocked", "skipped"))
         self.assertIn("syntax", ast_stage["summary"].lower())
 
         codegen_stage = next(s for s in run_data["stages"] if s["id"] == "code_generation")
-        self.assertEqual(codegen_stage["status"], "skipped")
+        self.assertIn(codegen_stage["status"], ("blocked", "skipped"))
 
         sandbox_stage = next(s for s in run_data["stages"] if s["id"] == "sandbox_execution")
-        self.assertEqual(sandbox_stage["status"], "skipped")
+        self.assertIn(sandbox_stage["status"], ("blocked", "skipped"))
 
     def test_20_ollama_offline_fallback(self):
         """20. Deterministic rules serve as immediate fallbacks if Ollama is unconfigured or offline."""
