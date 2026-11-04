@@ -1,5 +1,5 @@
 --- SYMBOL TABLE (SEMANTICS) ---
-Variable Name	| Type	| Scope	| Line
+Variable Name	| Type	| Current Value
 --------------------------------------------------
-stock	| numeric	| global	| 13
-order_size	| int	| global	| 3
+greeting	| str	| Hello, Multilingual VITAL!
+x	| int	| 42

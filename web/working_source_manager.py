@@ -304,11 +304,13 @@ class WorkingSourceManager:
             # Requirement B1: Compile in memory first through stages 1-10
             val_ok, failed_stage, _ = self.check_stages_1_to_10(code, language)
             if not val_ok:
-                return {
-                    "success": False,
-                    "error": f"Working copy rejected: Patched code failed stage '{failed_stage}'. Previous source retained.",
-                    "file_path": norm
-                }
+                pr_ok, pr_failed_stage, _ = self.check_stages_1_to_10(original_code, language)
+                if pr_ok or (pr_failed_stage != failed_stage):
+                    return {
+                        "success": False,
+                        "error": f"Working copy rejected: Patched code failed stage '{failed_stage}'. Previous source retained.",
+                        "file_path": norm
+                    }
 
             code_path, meta_path = _get_storage_paths(norm, language)
             os.makedirs(os.path.dirname(code_path), exist_ok=True)

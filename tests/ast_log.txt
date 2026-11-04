@@ -2,54 +2,20 @@
 
 Module (Root)
 ├── Assign
-│   ├── Name (id='stock')
+│   ├── Name (id='x')
 │   │   └── Store
-│   └── Constant (value=100)
+│   └── Constant (value=10)
 ├── Assign
-│   ├── Name (id='order_size')
+│   ├── Name (id='y')
 │   │   └── Store
-│   └── Constant (value=15)
-├── Expr
-│   └── Call
-│       ├── Name (id='print')
-│       │   └── Load
-│       └── Constant (value='Processing Warehouse Orders...')
-└── While
-    ├── Compare
-    │   ├── Name (id='stock')
-    │   │   └── Load
-    │   ├── Gt
-    │   └── Constant (value=0)
-    ├── If
-    │   ├── Compare
-    │   │   ├── Name (id='stock')
-    │   │   │   └── Load
-    │   │   ├── Lt
-    │   │   └── Name (id='order_size')
-    │   │       └── Load
-    │   ├── Expr
-    │   │   └── Call
-    │   │       ├── Name (id='print')
-    │   │       │   └── Load
-    │   │       └── Constant (value='Warning: Insufficient stock for next order.')
-    │   └── Break
-    ├── Assign
-    │   ├── Name (id='stock')
-    │   │   └── Store
-    │   └── BinOp
-    │       ├── Name (id='stock')
-    │       │   └── Load
-    │       ├── Sub
-    │       └── Name (id='order_size')
-    │           └── Load
-    ├── Expr
-    │   └── Call
-    │       ├── Name (id='print')
-    │       │   └── Load
-    │       └── Constant (value='Order fulfilled. Remaining:')
-    └── Expr
-        └── Call
-            ├── Name (id='print')
+│   └── Constant (value=20)
+└── Expr
+    └── Call
+        ├── Name (id='print')
+        │   └── Load
+        └── BinOp
+            ├── Name (id='x')
             │   └── Load
-            └── Name (id='stock')
+            ├── Add
+            └── Name (id='y')
                 └── Load

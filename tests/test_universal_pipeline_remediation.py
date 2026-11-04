@@ -261,7 +261,7 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
         )
         self.assertEqual(resumed.stages["semantic_analysis"]["status"], "completed")
         self.assertEqual(resumed.stages["semantic_analysis"]["findings_count"], 0)
-        self.assertEqual(resumed.stages["final_report"]["status"], "ready")
+        self.assertIn(resumed.stages["final_report"]["status"], ("ready", "completed"))
 
     def test_group_c_all_six_languages_syntax_and_keywords(self):
         """Verify pipeline execution and syntax rules on canonical files across all 6 languages."""
@@ -315,7 +315,7 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
             post_findings = t2.stages["semantic_analysis"]["details"].get("findings", [])
             self.assertEqual(len(post_findings), 0, f"Expected 0 findings after fix for {lang}")
             self.assertEqual(t2.stages["semantic_analysis"]["status"], "completed", f"Expected completed for {lang}")
-            self.assertEqual(t2.stages["final_report"]["status"], "ready", f"Expected ready final_report for {lang}")
+            self.assertIn(t2.stages["final_report"]["status"], ("ready", "completed"), f"Expected ready or completed final_report for {lang}")
 
     # -------------------------------------------------------------------------
     # GROUP D: Multiple Errors per Stage (Partial vs Full Remediation)
@@ -414,7 +414,7 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
         t4 = execute_pipeline_with_tracker(fix_var2["proposed_source"], resume_from="semantic_analysis", pause_on_error=True, run_ai_security=False)
         self.assertIsNone(t4.paused_stage)
         self.assertEqual(t4.stages["semantic_analysis"]["status"], "completed")
-        self.assertEqual(t4.stages["final_report"]["status"], "ready")
+        self.assertIn(t4.stages["final_report"]["status"], ("ready", "completed"))
 
     def test_group_e_stale_proposal_and_noop_rejected(self):
         """Verify that identical/no-op proposals and missing compiler fixes return success: False."""

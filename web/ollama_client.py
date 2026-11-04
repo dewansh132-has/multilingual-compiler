@@ -318,6 +318,24 @@ class OllamaClient:
         Verifies local Ollama service and checks availability of both 3B and 7B models.
         Returns: (is_healthy: bool, status_message: str, details: dict)
         """
+        if os.environ.get("VITAL_AI_DISABLED") in ("1", "true", "True"):
+            return HealthResult(
+                False,
+                "Ollama offline: AI Disabled via VITAL_AI_DISABLED environment variable.",
+                {
+                    "service_reachable": False,
+                    "model_fast_found": False,
+                    "model_advanced_found": False,
+                    "available_models": [],
+                    "target_model": self.model_name,
+                    "model_fast": self.model_fast,
+                    "model_advanced": self.model_advanced,
+                    "latency_ms": 0.0,
+                    "hardware": self.get_hardware_status(),
+                    "disabled": True
+                }
+            )
+
         now = time.time()
         if not force_refresh and self._cached_health and (now - self._last_health_check_time < self._health_cache_ttl):
             return self._cached_health
@@ -415,6 +433,15 @@ class OllamaClient:
             cached_resp = dict(self._cache[cache_key])
             cached_resp["cached"] = True
             return cached_resp
+
+        if os.environ.get("VITAL_AI_DISABLED") in ("1", "true", "True"):
+            return {
+                "success": False,
+                "content": "",
+                "error": "Ollama offline or unreachable: AI Disabled via VITAL_AI_DISABLED.",
+                "offline": True,
+                "model": target_model
+            }
 
         # Check in-flight duplicate requests
         if cache_key and cache_key in self._in_flight:
