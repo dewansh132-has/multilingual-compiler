@@ -1,149 +1,26 @@
 --- ABSTRACT SYNTAX TREE (VISUAL) ---
 
 Module (Root)
-├── FunctionDef
-│   ├── arguments
-│   │   └── arg
-│   ├── Assign
-│   │   ├── Name (id='వచన_పొడవు')
-│   │   │   └── Store
-│   │   └── Constant (value=24)
-│   ├── If
-│   │   ├── Compare
-│   │   │   ├── Name (id='వచన_పొడవు')
-│   │   │   │   └── Load
-│   │   │   ├── Gt
-│   │   │   └── Constant (value=100)
-│   │   ├── Expr
-│   │   │   └── Call
-│   │   │       ├── Name (id='print')
-│   │   │       │   └── Load
-│   │   │       └── Constant (value='ఇన్\u200cపుట్ తిరస్కరించబడింది: గరిష్ట పొడవు మించిపోయింది.')
-│   │   └── Return
-│   │       └── Constant (value=0)
-│   └── Return
-│       └── Constant (value=1)
-├── FunctionDef
-│   ├── arguments
-│   │   └── arg
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='SQL డేటాబేస్ క్వెరీ సిద్ధం చేయబడుతోంది...')
-│   ├── Assign
-│   │   ├── Name (id='పూర్తి_క్వెరీ')
-│   │   │   └── Store
-│   │   └── Constant (value="SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?")
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='మాక్ డేటాబేస్ ఇంజిన్\u200cఅమలు చేయబడుతున్న క్వెరీ:')
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Name (id='పూర్తి_క్వెరీ')
-│   │           └── Load
-│   └── Return
-│       └── Constant (value=1)
-├── FunctionDef
-│   ├── arguments
-│   │   └── arg
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='ఆపరేటింగ్ సిస్టమ్ నిర్వహణ పనిని నిర్మిస్తోంది...')
-│   ├── Assign
-│   │   ├── Name (id='బేస్_కమాండ్')
-│   │   │   └── Store
-│   │   └── BinOp
-│   │       ├── Constant (value="echo 'నిర్వహణ లాగ్: '  ")
-│   │       ├── Add
-│   │       └── Name (id='కమాండ్_వాదనలు')
-│   │           └── Load
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='అమలు కోసం పంపబడుతున్న కమాండ్ స్ట్రింగ్:')
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Name (id='బేస్_కమాండ్')
-│   │           └── Load
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='eval')
-│   │       │   └── Load
-│   │       └── Constant (value="print('సురక్షితమైన మాక్ మూల్యాంకనం అమలవుతోంది...')")
-│   └── Return
-│       └── Constant (value=1)
-├── Expr
-│   └── Call
-│       ├── Name (id='print')
-│       │   └── Load
-│       └── Constant (value='=== VITAL భద్రతా ప్రయోగశాల: డైనమిక్ ఇంజెక్షన్ హార్నెస్ ===')
 ├── Assign
-│   ├── Name (id='హానికరమైన_sql')
+│   ├── Name (id='x')
 │   │   └── Store
-│   └── Constant (value='1=1 OR id IS NOT NULL --')
+│   └── Constant (value=10)
 ├── Assign
-│   ├── Name (id='చెల్లుబాటు_అయింది')
+│   ├── Name (id='y')
 │   │   └── Store
-│   └── Call
-│       ├── Name (id='ఇన్‌పుట్_ధృవీకరించు')
+│   └── Constant (value=20)
+├── Assign
+│   ├── Name (id='sum')
+│   │   └── Store
+│   └── BinOp
+│       ├── Name (id='x')
 │       │   └── Load
-│       └── Name (id='హానికరమైన_sql')
+│       ├── Add
+│       └── Name (id='y')
 │           └── Load
-├── If
-│   ├── Compare
-│   │   ├── Name (id='చెల్లుబాటు_అయింది')
-│   │   │   └── Load
-│   │   ├── Eq
-│   │   └── Constant (value=1)
-│   ├── Assign
-│   │   ├── Name (id='స్థితి')
-│   │   │   └── Store
-│   │   └── Call
-│   │       ├── Name (id='డేటాబేస్_క్వెరీ_రన్_చేయి')
-│   │       │   └── Load
-│   │       └── Name (id='హానికరమైన_sql')
-│   │           └── Load
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='క్వెరీ డిస్పాచ్ స్థితి:')
-│   └── Expr
-│       └── Call
-│           ├── Name (id='print')
-│           │   └── Load
-│           └── Name (id='స్థితి')
-│               └── Load
-├── Assign
-│   ├── Name (id='హానికరమైన_షెల్')
-│   │   └── Store
-│   └── Constant (value='run_diagnostics  rm -rf /tmp/vital_sandbox')
-├── Assign
-│   ├── Name (id='కమాండ్_స్థితి')
-│   │   └── Store
-│   └── Call
-│       ├── Name (id='సిస్టమ్_కమాండ్_పంపు')
-│       │   └── Load
-│       └── Name (id='హానికరమైన_షెల్')
-│           └── Load
-├── Expr
-│   └── Call
-│       ├── Name (id='print')
-│       │   └── Load
-│       └── Constant (value='కమాండ్ అమలు స్థితి:')
 └── Expr
     └── Call
         ├── Name (id='print')
         │   └── Load
-        └── Name (id='కమాండ్_స్థితి')
+        └── Name (id='sum')
             └── Load

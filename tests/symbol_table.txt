@@ -1,4 +1,6 @@
 --- SYMBOL TABLE (SEMANTICS) ---
 Variable Name	| Type	| Current Value
 --------------------------------------------------
-सङ्ख्या	| int	| 35
+x	| int	| 10
+y	| int	| 20
+sum	| int	| 30
