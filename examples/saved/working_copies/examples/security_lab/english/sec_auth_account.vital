@@ -1,0 +1,80 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo A: Account & Permission Management
+// Language: English
+// Difficulty: Intermediate
+// Seeded Defects: IDOR (CWE-639), State Bypass (CWE-285), Undefined Variable (Semantic)
+
+let current_session_user = 1042
+let current_session_token = "sess_live_token_77a9b"
+let is_authenticated = 1
+
+function verify_session(token) {
+    if (token == "sess_live_token_77a9b") {
+        return 1
+    } else {
+        return 0
+    }
+}
+
+function check_account_status(account_id, is_active) {
+    // Logic flaw: Allows transfer even if inactive when amount is small
+    if (is_active == 0) {
+        print("Warning: Account is currently suspended.")
+        return 0
+    }
+    return 1
+}
+
+function transfer_funds(caller_id, from_account_id, to_account_id, amount) {
+    // Step 1: Authenticate session
+    let auth_ok = verify_session(current_session_token)
+    if (auth_ok == 0) {
+        print("Access Denied: Invalid Session Token.")
+        return 0
+    }
+
+    // VULNERABILITY (IDOR): Checks if user is authenticated,
+    // but FAILS to verify if caller_id owns from_account_id!
+    // Any authenticated caller can drain arbitrary account IDs.
+    print("Session authenticated for user:")
+    print(caller_id)
+
+    // Unsafe state check: skips status verification for transfers under 500
+    if (amount > 500) {
+        let status_ok = check_account_status(from_account_id, 0)
+        if (status_ok == 0) {
+            print("Transfer blocked: Source account is suspended.")
+            return 0
+        }
+    } else {
+        print("Bypassing suspension check for small transfer amount.")
+    }
+
+    // Execute transfer
+    print("Initiating transfer amount:")
+    print(amount)
+    print("Funds transferred successfully to:")
+    print(to_account_id)
+    return 1
+}
+
+function close_account(account_id, confirm_code) {
+    if (confirm_code == 9999) {
+        // SEMANTIC DEFECT: 'acc_status' is undefined in this scope!
+        // Should be 'account_status'
+        let account_closed = 1
+        print("Account closed successfully:")
+        let acc_status = 1
+        print(acc_status)
+        return 1
+    }
+    return 0
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: Account & Permission Manager ===")
+let target_acc = 5001
+let victim_acc = 9002
+let result = transfer_funds(current_session_user, victim_acc, target_acc, 250)
+print("Transfer status code:")
+print(result)

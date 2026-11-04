@@ -1,5 +1,13 @@
 --- SYMBOL TABLE (SEMANTICS) ---
 Variable Name	| Type	| Current Value
 --------------------------------------------------
-greeting	| str	| Hello, Multilingual VITAL!
-x	| int	| 42
+current_session_user	| int	| 1042
+current_session_token	| str	| sess_live_token_77a9b
+is_authenticated	| int	| 1
+verify_session	| function	| <function verify_session at 0x000002555C7224B0>
+check_account_status	| function	| <function check_account_status at 0x000002555C722560>
+transfer_funds	| function	| <function transfer_funds at 0x000002555C722610>
+close_account	| function	| <function close_account at 0x000002555C7226C0>
+target_acc	| int	| 5001
+victim_acc	| int	| 9002
+result	| int	| 1

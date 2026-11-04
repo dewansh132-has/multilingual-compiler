@@ -1,6 +1,6 @@
 --- PARSER VALIDATION REPORT ---
 
-[INFO] Token stream consumed: 14 active tokens validated.
-[INFO] Token Breakdown: Keywords=3, Operators=3, Identifiers=4, Literals=2, Delimiters=2
+[INFO] Token stream consumed: 242 active tokens validated.
+[INFO] Token Breakdown: Keywords=46, Operators=16, Identifiers=42, Literals=34, Delimiters=89
 [SUCCESS] Structure is Valid.
 [SUCCESS] Logic Tree Verified.

@@ -1,0 +1,18 @@
+{
+  "file_path": "examples/security_lab/english/sec_auth_account.vital",
+  "source_revision": 2,
+  "undo_stack": [
+    {
+      "code": "// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING\n// VITAL Security Lab Demo A: Account & Permission Management\n// Language: English\n// Difficulty: Intermediate\n// Seeded Defects: IDOR (CWE-639), State Bypass (CWE-285), Undefined Variable (Semantic)\n\nlet current_session_user = 1042\nlet current_session_token = \"sess_live_token_77a9b\"\nlet is_authenticated = 1\n\nfunction verify_session(token) {\n    if (token == \"sess_live_token_77a9b\") {\n        return 1\n    } else {\n        return 0\n    }\n}\n\nfunction check_account_status(account_id, is_active) {\n    // Logic flaw: Allows transfer even if inactive when amount is small\n    if (is_active == 0) {\n        print(\"Warning: Account is currently suspended.\")\n        return 0\n    }\n    return 1\n}\n\nfunction transfer_funds(caller_id, from_account_id, to_account_id, amount) {\n    // Step 1: Authenticate session\n    let auth_ok = verify_session(current_session_token)\n    if (auth_ok == 0) {\n        print(\"Access Denied: Invalid Session Token.\")\n        return 0\n    }\n\n    // VULNERABILITY (IDOR): Checks if user is authenticated,\n    // but FAILS to verify if caller_id owns from_account_id!\n    // Any authenticated caller can drain arbitrary account IDs.\n    print(\"Session authenticated for user:\")\n    print(caller_id)\n\n    // Unsafe state check: skips status verification for transfers under 500\n    if (amount > 500) {\n        let status_ok = check_account_status(from_account_id, 0)\n        if (status_ok == 0) {\n            print(\"Transfer blocked: Source account is suspended.\")\n            return 0\n        }\n    } else {\n        print(\"Bypassing suspension check for small transfer amount.\")\n    }\n\n    // Execute transfer\n    print(\"Initiating transfer amount:\")\n    print(amount)\n    print(\"Funds transferred successfully to:\")\n    print(to_account_id)\n    return 1\n}\n\nfunction close_account(account_id, confirm_code) {\n    if (confirm_code == 9999) {\n        // SEMANTIC DEFECT: 'acc_status' is undefined in this scope!\n        // Should be 'account_status'\n        let account_closed = 1\n        print(\"Account closed successfully:\")\n        print(acc_status)\n        return 1\n    }\n    return 0\n}\n\n// Execution test harness\nprint(\"=== VITAL Security Lab: Account & Permission Manager ===\")\nlet target_acc = 5001\nlet victim_acc = 9002\nlet result = transfer_funds(current_session_user, victim_acc, target_acc, 250)\nprint(\"Transfer status code:\")\nprint(result)\n",
+      "source_revision": 1,
+      "timestamp": 1793833913.7691338,
+      "label": "Applied AI correction for ",
+      "content_hash": "24b2a2ea7a20ac3585a50e859b88ce2479c716b5e1f6a071457bc597e530ac86"
+    }
+  ],
+  "content_hash": "6e729951f566afba9c9181e8c5d2925ddf0d827cd2b3a6892366cabcd9f1d9d3",
+  "pristine_sha256": "24b2a2ea7a20ac3585a50e859b88ce2479c716b5e1f6a071457bc597e530ac86",
+  "language": "",
+  "last_saved": 1793833913.7691953,
+  "is_dirty": true
+}
