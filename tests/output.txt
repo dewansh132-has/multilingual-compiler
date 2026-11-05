@@ -1,3 +1,6 @@
-Hello, Multilingual VITAL!
-The value :
-42
+=== VITAL Security Lab: Account & Permission Manager ===
+Session authenticated for user:
+1042
+Access Denied: Caller does not own the source account.
+Transfer status code:
+0
