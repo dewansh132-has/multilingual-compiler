@@ -371,6 +371,8 @@
         state.pipeline.compiledSource = null;
         state.pipeline.isReportGenerated = false;
         state.pipeline.isReadyForReport = false;
+        state.pipeline.isFinished = false;
+        state.pipeline.pendingArtifacts = null;
       }
       showOutputWaitingState(
         "Source Modified — Re-compilation Needed",
@@ -1003,6 +1005,8 @@
     state.pipeline.hasReceivedEventForRun = false;
     state.pipeline.isReportGenerated = false;
     state.pipeline.isReadyForReport = false;
+    state.pipeline.isFinished = false;
+    state.pipeline.pendingArtifacts = null;
     showOutputWaitingState(
       "Awaiting Compilation & Final Report",
       "Compiler artifacts will appear here after all required stages pass and the Final Report is generated."
@@ -1053,6 +1057,7 @@
 
     state.pipeline.isReadyForReport = false;
     state.pipeline.isReportGenerated = false;
+    state.pipeline.isFinished = false;
     state.pipeline.pendingArtifacts = null;
   }
 
@@ -1067,6 +1072,7 @@
       }
     }
     state.pipeline.isReportGenerated = false;
+    state.pipeline.isFinished = false;
     state.pipeline.pendingArtifacts = null;
 
     STAGE_ORDER.forEach(sid => {
@@ -1161,6 +1167,9 @@
           if (icon) icon.textContent = "⟳";
           node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         } else if (evtType === "stage_complete") {
+          if (stage_id === "final_report") {
+            state.pipeline.isReportGenerated = true;
+          }
           if (findings_count > 0) {
             node.className = `stepper-step status-warning${activeClass}`;
             if (icon) icon.textContent = "⚠";
@@ -1238,10 +1247,21 @@
     // Pipeline Finish Event
     if (evtType === "pipeline_finish") {
       const status = event.status || "completed";
+      state.pipeline.isFinished = true;
+      state.pipeline.finishStatus = status;
       if (elements.btnFinalReport) elements.btnFinalReport.disabled = false;
       if (event.artifacts) {
         state.pipeline.pendingArtifacts = event.artifacts;
       }
+
+      const mandatoryStages = [
+        "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+        "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+        "code_generation", "code_validation"
+      ];
+      const mandatoryFailed = mandatoryStages.some(id => (state.pipeline.stageData[id] || {}).status === "failed");
+      const stage14Data = state.pipeline.stageData["final_report"] || {};
+      const stage14Completed = stage14Data.status === "completed" || stage14Data.status === "passed";
 
       if (status === "ready_for_report") {
         state.pipeline.isReadyForReport = true;
@@ -1257,7 +1277,7 @@
           elements.pipelineMetricStage.textContent = "All 13 Stages Verified (Ready for Final Report)";
         }
         if (elements.pipelineMetricProgress) {
-          elements.pipelineMetricProgress.textContent = "13/13 Mandatory Stages Verified (Stage 14 Gate Ready)";
+          elements.pipelineMetricProgress.textContent = "13/13 Stages Verified (Stage 14 Gate Ready)";
         }
         const node14 = document.getElementById("step-node-final_report");
         if (node14) {
@@ -1269,19 +1289,36 @@
           "All 13 Stages Verified Clean",
           "Click stage 14 (Final Report) in the pipeline header above to review metrics and generate the final report."
         );
-      } else if (status === "completed" && state.pipeline.isReportGenerated) {
+      } else if (mandatoryFailed || state.pipeline.isPaused) {
         if (elements.pipelineStatusBadge) {
-          elements.pipelineStatusBadge.textContent = "COMPLETED";
-          elements.pipelineStatusBadge.className = "pipeline-status-badge badge-completed";
+          elements.pipelineStatusBadge.textContent = state.pipeline.isPaused ? "PAUSED FOR CORRECTION" : (status.toUpperCase() || "FAILED");
+          elements.pipelineStatusBadge.className = "pipeline-status-badge badge-failed";
+        }
+        if (elements.pipelineProgressFill) {
+          elements.pipelineProgressFill.classList.add("fill-failed");
+        }
+        if (elements.pipelineMetricStage) {
+          elements.pipelineMetricStage.textContent = state.pipeline.isPaused ? `Paused: Stage ${state.pipeline.pausedStage || "Correction Required"}` : `Finished: ${status.toUpperCase()}`;
+        }
+        showOutputWaitingState(
+          "Compilation Incomplete",
+          "Compilation encountered errors or was paused. Correct errors in the stage panels above."
+        );
+      } else if (stage14Completed || status === "completed" || status === "warning") {
+        state.pipeline.isReportGenerated = true;
+        if (elements.pipelineStatusBadge) {
+          elements.pipelineStatusBadge.textContent = status.toUpperCase();
+          elements.pipelineStatusBadge.className = `pipeline-status-badge badge-${status}`;
         }
         if (elements.pipelineProgressFill) {
           elements.pipelineProgressFill.style.width = "100%";
+          elements.pipelineProgressFill.className = (status === "warning") ? "pipeline-progress-fill fill-warning" : "pipeline-progress-fill";
         }
         if (elements.pipelineMetricStage) {
-          elements.pipelineMetricStage.textContent = "Pipeline Completed";
+          elements.pipelineMetricStage.textContent = (status === "warning") ? "Pipeline Completed with Warnings" : "Pipeline Completed";
         }
         if (elements.pipelineMetricProgress) {
-          elements.pipelineMetricProgress.textContent = "14/14 Mandatory Stages Completed";
+          elements.pipelineMetricProgress.textContent = "14/14 Stages Completed";
         }
         if (event.artifacts) {
           showOutputArtifacts(event.artifacts);
@@ -1635,13 +1672,71 @@
   }
 
   function renderFinalReportStage(defn, data, status, duration, category) {
-    const earlierStages = state.pipeline.stages.filter(s => s.id !== "final_report");
-    const unpassedStages = earlierStages.filter(s => {
-      const stStatus = (state.pipeline.stageData[s.id] || {}).status || "pending";
-      return stStatus !== "completed" && stStatus !== "warning";
+    const mandatoryStages = [
+      "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+      "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+      "code_generation", "code_validation"
+    ];
+    const secondaryStages = [
+      "security_analysis", "ai_security_analysis", "sandbox_execution"
+    ];
+
+    const currentCode = state.editor ? state.editor.getValue() : "";
+    const currentRevision = state.sourceRevisionId || 1;
+    const runRevision = state.pipeline.runRevision || 1;
+
+    // Check if run exists for current revision and matches active code
+    const runExistsForCurrentRevision = Boolean(
+      state.pipeline.compiledSource &&
+      currentCode === state.pipeline.compiledSource &&
+      runRevision === currentRevision &&
+      state.pipeline.isFinished
+    );
+
+    // Compute mandatory stages status (1-10)
+    let mandatoryPassedCount = 0;
+    let mandatoryWarnCount = 0;
+    const mandatoryFailedStages = [];
+    const uncompletedMandatoryStages = [];
+
+    mandatoryStages.forEach(id => {
+      const st = (state.pipeline.stageData[id] || {}).status || "pending";
+      if (st === "completed" || st === "passed") {
+        mandatoryPassedCount++;
+      } else if (st === "warning") {
+        mandatoryWarnCount++;
+      } else if (st === "failed") {
+        mandatoryFailedStages.push(id);
+      } else {
+        uncompletedMandatoryStages.push(id);
+      }
     });
-    const isReady = unpassedStages.length === 0 && (state.pipeline.isReadyForReport || state.pipeline.isReportGenerated);
-    const isGenerated = state.pipeline.isReportGenerated;
+
+    const mandatory1To10PassedOrWarned = (mandatoryPassedCount + mandatoryWarnCount === 10) && (mandatoryFailedStages.length === 0);
+
+    // Compute stages 11-13 status
+    let secPassed = 0;
+    let secWarn = 0;
+    let secFailed = 0;
+    let secSkipped = 0;
+
+    secondaryStages.forEach(id => {
+      const st = (state.pipeline.stageData[id] || {}).status || "pending";
+      if (st === "completed" || st === "passed") secPassed++;
+      else if (st === "warning") secWarn++;
+      else if (st === "failed") secFailed++;
+      else if (st === "skipped") secSkipped++;
+    });
+
+    // Determine whether report is generated or gate is shown:
+    // "The drawer must read the CURRENT run state each time it opens: if stages 1-10 passed/warned and the run finished,
+    // show the generated report directly, with no gate message. Show the gate only when no run exists for the current revision
+    // or a mandatory stage failed."
+    const isGenerated = Boolean(
+      (runExistsForCurrentRevision && mandatory1To10PassedOrWarned && !state.pipeline.isPaused) ||
+      (state.pipeline.isReportGenerated && !mandatoryFailedStages.length && runExistsForCurrentRevision)
+    );
+    const isReady = !isGenerated && state.pipeline.isReadyForReport;
 
     let gateCardHtml = "";
     if (isGenerated) {
@@ -1683,7 +1778,22 @@
         </div>
       `;
     } else {
-      const unpassedNames = unpassedStages.map(s => `<li><strong>${escapeHtml(s.name)}</strong> (Status: ${escapeHtml((state.pipeline.stageData[s.id] || {}).status || 'Pending')})</li>`).join("");
+      let unpassedNames = "";
+      if (!runExistsForCurrentRevision) {
+        unpassedNames = "<li>Pipeline has not been executed yet for the current revision.</li>";
+      } else if (mandatoryFailedStages.length > 0) {
+        unpassedNames = mandatoryFailedStages.map(sId => {
+          const sObj = state.pipeline.stages.find(s => s.id === sId) || { name: sId };
+          return `<li><strong>${escapeHtml(sObj.name)}</strong> (Status: Failed)</li>`;
+        }).join("");
+      } else {
+        const remainingUncompleted = uncompletedMandatoryStages.map(sId => {
+          const sObj = state.pipeline.stages.find(s => s.id === sId) || { name: sId };
+          return `<li><strong>${escapeHtml(sObj.name)}</strong> (Status: Pending)</li>`;
+        }).join("");
+        unpassedNames = remainingUncompleted || "<li>Pipeline has not been executed yet.</li>";
+      }
+
       gateCardHtml = `
         <div class="drawer-card" style="border-left: 3px solid #EF4444; background: #FEF2F2; padding: 14px 16px;">
           <div style="font-size: 13.5px; font-weight: 700; color: #991B1B;">
@@ -1692,7 +1802,7 @@
           <div style="font-size: 12px; color: #7F1D1D; margin-top: 6px; line-height: 1.5;">
             The Final Report cannot be generated because required earlier stages (including mandatory Optimization) have not completed successfully:
             <ul style="margin: 8px 0 0 16px; padding: 0;">
-              ${unpassedNames || '<li>Pipeline has not been executed yet.</li>'}
+              ${unpassedNames}
             </ul>
           </div>
           <div style="margin-top: 12px;">
@@ -1706,7 +1816,6 @@
 
     const resCount = Object.values(state.findingsStore || {}).filter(f => f.status === "resolved").length;
     const remSec = state.security.findings.length;
-    const currentCode = state.editor ? state.editor.getValue() : "";
     const lineCount = currentCode ? currentCode.split("\n").length : 0;
     const langName = state.currentFile ? state.currentFile.language : "Multilingual";
 
@@ -1731,18 +1840,43 @@
       optStatusColor = "#DC2626";
     }
 
-    const completedMandatoryCount = state.pipeline.stages.filter(s => {
-      const st = (state.pipeline.stageData[s.id] || {}).status;
-      return st === "completed" || st === "passed" || st === "warning";
-    }).length;
+    // Format accurate stages label:
+    // "Mandatory stages (1-10): 10/10 passed - Stages 11-13: 1 passed, 2 warnings"
+    let mandatorySummary = "";
+    if (mandatoryPassedCount === 10) {
+      mandatorySummary = "10/10 passed";
+    } else if (mandatoryPassedCount + mandatoryWarnCount === 10) {
+      mandatorySummary = `${mandatoryPassedCount}/10 passed, ${mandatoryWarnCount} warning${mandatoryWarnCount === 1 ? '' : 's'}`;
+    } else if (mandatoryFailedStages.length > 0) {
+      mandatorySummary = `${mandatoryPassedCount + mandatoryWarnCount}/10 passed, ${mandatoryFailedStages.length} failed`;
+    } else {
+      mandatorySummary = `${mandatoryPassedCount + mandatoryWarnCount}/10 passed`;
+    }
+
+    const secParts = [];
+    if (secPassed > 0) secParts.push(`${secPassed} passed`);
+    if (secWarn > 0) secParts.push(`${secWarn} warning${secWarn === 1 ? '' : 's'}`);
+    if (secFailed > 0) secParts.push(`${secFailed} failed`);
+    if (secSkipped > 0) secParts.push(`${secSkipped} skipped`);
+    const secondarySummary = secParts.length > 0 ? secParts.join(", ") : "pending";
+
+    const stagesPassedAccuracyLabel = `Mandatory stages (1-10): ${mandatorySummary} - Stages 11-13: ${secondarySummary}`;
+
+    const isWarningOverall = ((data && data.status === 'warning') || status === 'warning' || state.pipeline.finishStatus === 'warning');
+    const pipelineStatusText = isGenerated
+      ? (isWarningOverall ? 'COMPLETED WITH WARNINGS' : 'SUCCESSFUL / COMPLETE')
+      : (isReady ? 'READY FOR REPORT' : 'PENDING PREREQUISITES');
+    const pipelineStatusColor = isGenerated
+      ? (isWarningOverall ? '#D97706' : '#059669')
+      : (isReady ? '#2563EB' : '#DC2626');
 
     const summaryCardHtml = `
       <div class="drawer-card">
         <div class="drawer-card-header"><span class="drawer-card-title">Compilation & Pipeline Audit Summary</span></div>
         <div class="drawer-kv-row"><span class="drawer-kv-key">Source Language</span><span class="drawer-kv-val">${escapeHtml(langName)} (${lineCount} lines)</span></div>
         <div class="drawer-kv-row"><span class="drawer-kv-key">Target Language</span><span class="drawer-kv-val">Python 3 (Standard Library)</span></div>
-        <div class="drawer-kv-row"><span class="drawer-kv-key">Pipeline Status</span><span class="drawer-kv-val" style="font-weight: 700; color: ${isGenerated ? '#059669' : (isReady ? '#2563EB' : '#DC2626')};">${isGenerated ? 'SUCCESSFUL / COMPLETE' : (isReady ? 'READY FOR REPORT' : 'PENDING PREREQUISITES')}</span></div>
-        <div class="drawer-kv-row"><span class="drawer-kv-key">Compiler Stages</span><span class="drawer-kv-val">${completedMandatoryCount}/14 Mandatory Stages Passed</span></div>
+        <div class="drawer-kv-row"><span class="drawer-kv-key">Pipeline Status</span><span class="drawer-kv-val" style="font-weight: 700; color: ${pipelineStatusColor};">${pipelineStatusText}</span></div>
+        <div class="drawer-kv-row"><span class="drawer-kv-key">Compiler Stages</span><span class="drawer-kv-val">${stagesPassedAccuracyLabel}</span></div>
         <div class="drawer-kv-row"><span class="drawer-kv-key">Optimization Stage</span><span class="drawer-kv-val" style="color: ${optStatusColor}; font-weight: 700;">${optStatusLabel}</span></div>
         <div class="drawer-kv-row"><span class="drawer-kv-key">Resolved Diagnostics</span><span class="drawer-kv-val">${resCount} Issues Corrected</span></div>
         <div class="drawer-kv-row"><span class="drawer-kv-key">Remaining Warnings</span><span class="drawer-kv-val">${remSec} Flag(s)</span></div>
@@ -1779,7 +1913,7 @@
         <div class="drawer-card-header"><span class="drawer-card-title">Stage Purpose & Overview</span></div>
         <div class="drawer-desc-text">${escapeHtml(defn.desc)}</div>
         <div class="drawer-summary-box" style="${isGenerated ? 'border-left: 3px solid #10B981; background: #F0FDF4;' : (isReady ? 'border-left: 3px solid #2563EB; background: #EFF6FF;' : 'border-left: 3px solid #EF4444; background: #FEF2F2;')}">
-          <strong>Execution Status:</strong> ${escapeHtml(data.summary || (isGenerated ? "Final Report completed and published" : (isReady ? "Ready to generate report" : "Awaiting prerequisite stages")))}
+          <strong>Execution Status:</strong> ${escapeHtml((data && data.summary) || (isGenerated ? "Final Report completed and published" : (isReady ? "Ready to generate report" : "Awaiting prerequisite stages")))}
         </div>
       </div>
 
@@ -2923,7 +3057,12 @@
     state.pipeline.compiledSource = state.editor.getValue();
     state.pipeline.isReportGenerated = false;
     state.pipeline.isReadyForReport = false;
+    state.pipeline.isFinished = false;
+    state.pipeline.finishStatus = null;
     state.pipeline.pendingArtifacts = null;
+    state.pipeline.isPaused = false;
+    state.pipeline.pausedStage = null;
+    state.pipeline.runRevision = state.sourceRevisionId || 1;
 
     if (!resumeFromStage) {
       resetPipelineStepper();
@@ -2934,6 +3073,10 @@
       setStatus("Status: Running Compiler & Security Pipeline...", "running");
     } else {
       invalidateDownstreamStages(resumeFromStage);
+      showOutputWaitingState(
+        "Pipeline In Progress",
+        "Compiling source code progressively. Output tabs will appear after Final Report generation."
+      );
       const resumeNode = document.getElementById(`step-node-${resumeFromStage}`);
       if (resumeNode) {
         resumeNode.className = "stepper-step status-running";
@@ -3596,8 +3739,8 @@
         return;
       }
 
-      setStatus(`Successfully saved ${cleanFilename} to User Saved Programs!`, "ready");
-      alert(`Corrected program successfully saved as "${cleanFilename}"!\n\nIt is now accessible in the Explorer under "User Saved Programs" without security demo labels.`);
+      setStatus(`Successfully saved ${cleanFilename} to My Saved Programs!`, "ready");
+      alert(`Corrected program successfully saved as "${cleanFilename}"!\n\nIt is now accessible in the Explorer under "My Saved Programs" without security demo labels.`);
 
       // Refresh demo tree so new file appears in Explorer
       await loadDemosList();

@@ -120,6 +120,10 @@ def get_all_demos() -> Dict[str, Any]:
             continue
         seen_relpaths.add(rel_path)
 
+        # Exclude everything under examples/saved/working_copies from the demo catalog
+        if 'examples/saved/working_copies' in rel_path or '/working_copies/' in f'/{rel_path}/':
+            continue
+
         filename = os.path.basename(full_path)
         try:
             with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
@@ -137,7 +141,7 @@ def get_all_demos() -> Dict[str, Any]:
 
         # Determine category
         if is_user_saved:
-            category = "User Saved Programs"
+            category = "My Saved Programs"
         elif is_sec_lab:
             category = "Security Lab"
         elif rel_path.startswith('examples/'):
@@ -184,7 +188,7 @@ def get_all_demos() -> Dict[str, Any]:
     # Group by Category (Security Lab placed first for educational priority)
     categories_order = [
         "Security Lab",
-        "User Saved Programs",
+        "My Saved Programs",
         "Canonical Examples",
         "Cross-Language Equivalence",
         "Benchmark: Low Complexity",
@@ -199,6 +203,9 @@ def get_all_demos() -> Dict[str, Any]:
         if cat not in by_category:
             by_category[cat] = []
         by_category[cat].append(item)
+
+    # Alias for backward compatibility with tests/code expecting "User Saved Programs"
+    by_category["User Saved Programs"] = by_category["My Saved Programs"]
 
     return {
         "total_count": len(demos_list),

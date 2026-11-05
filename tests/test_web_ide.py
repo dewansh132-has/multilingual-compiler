@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import unittest
+import subprocess
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -121,7 +122,7 @@ class TestWebIDEEndpoints(unittest.TestCase):
         json_data = resp.get_json()
         self.assertTrue(json_data.get('success'))
         data = json_data.get('data', {})
-        self.assertGreaterEqual(data.get('total_count', 0), 24)
+        self.assertEqual(data.get('total_count', 0), 86)
         
         # Verify all 6 languages are represented in by_language
         by_lang = data.get('by_language', {})
@@ -299,6 +300,308 @@ class TestDirectCompilerVsWebIDERegression(unittest.TestCase):
                 f"Direct: {repr(direct_output)}\n"
                 f"Web:    {repr(web_output)}"
             )
+
+
+class TestUIConsistencyBugs(unittest.TestCase):
+    """
+    Validation for UI consistency bug fixes:
+      BUG 1: No placeholder ("Compilation Incomplete") after completion with Stage 14 completed.
+      BUG 2: Stage 14 drawer reflects current run state directly (no gate message when 1-10 passed/warned; accurate label).
+      BUG 3: Catalog count stays 86 even with automatic working copy present in examples/saved/working_copies.
+    """
+
+    def setUp(self):
+        self.app = app
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    def test_catalog_count_stays_86_with_working_copy_present(self):
+        """BUG 3: Catalog count is 86 and excludes automatic working copies in examples/saved/working_copies."""
+        resp = self.client.get('/api/demos')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json().get('data', {})
+        self.assertEqual(data.get('total_count'), 86, "Catalog count must be exactly 86.")
+
+        # Ensure no working copies are in demos list
+        for d in data.get('demos', []):
+            self.assertNotIn("working_copies", d['path'], f"Working copy found in catalog: {d['path']}")
+
+        # Create temporary working copy to verify it remains excluded
+        working_copies_dir = os.path.join(PROJECT_ROOT, 'examples', 'saved', 'working_copies', 'test_dir')
+        os.makedirs(working_copies_dir, exist_ok=True)
+        probe_path = os.path.join(working_copies_dir, 'probe_autocopy.vital')
+        try:
+            with open(probe_path, 'w', encoding='utf-8') as f:
+                f.write('print("Auto working copy probe")\n')
+
+            resp2 = self.client.get('/api/demos')
+            data2 = resp2.get_json().get('data', {})
+            self.assertEqual(data2.get('total_count'), 86, "Catalog count must remain 86 with working copy present.")
+            for d in data2.get('demos', []):
+                self.assertNotIn("probe_autocopy.vital", d['path'])
+        finally:
+            if os.path.exists(probe_path):
+                os.remove(probe_path)
+
+        # Test that deliberate save via Save As (/api/save-file) appears in "My Saved Programs"
+        save_name = "test_deliberate_save_as.vital"
+        save_resp = self.client.post(
+            '/api/save-file',
+            json={"filename": save_name, "code": 'print("Deliberately saved")\n'}
+        )
+        self.assertEqual(save_resp.status_code, 200)
+        saved_file_path = os.path.join(PROJECT_ROOT, 'examples', 'saved', save_name)
+        try:
+            resp3 = self.client.get('/api/demos')
+            data3 = resp3.get_json().get('data', {})
+            self.assertEqual(data3.get('total_count'), 87)
+            self.assertIn("My Saved Programs", data3.get('categories_order', []))
+            my_saved = data3.get('by_category', {}).get('My Saved Programs', [])
+            self.assertTrue(any(item['filename'] == save_name for item in my_saved))
+            # Backward-compatible alias
+            user_saved = data3.get('by_category', {}).get('User Saved Programs', [])
+            self.assertTrue(any(item['filename'] == save_name for item in user_saved))
+        finally:
+            if os.path.exists(saved_file_path):
+                os.remove(saved_file_path)
+
+    def test_drawer_state_after_completed_run(self):
+        """BUG 2: Stage 14 drawer reads current run state: no gate when mandatory 1-10 passed, accurate label."""
+        # 1. Verify backend pipeline run marks mandatory stages 1-10 and stage 14 completed
+        hello_path = os.path.join(PROJECT_ROOT, 'examples', 'english', 'hello.vital')
+        with open(hello_path, 'r', encoding='utf-8') as f:
+            code = f.read()
+
+        run_resp = self.client.post('/api/pipeline/run', json={"code": code, "language": "English", "use_ai_security": False})
+        self.assertEqual(run_resp.status_code, 200)
+        run_data = run_resp.get_json()
+        stages = {s['id']: s['status'] for s in run_data.get('stages', [])}
+        mandatory_stages = [
+            "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+            "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+            "code_generation", "code_validation"
+        ]
+        for ms in mandatory_stages:
+            self.assertIn(stages.get(ms), ('completed', 'passed', 'warning'), f"Mandatory stage {ms} did not pass")
+        self.assertIn(stages.get('final_report'), ('completed', 'passed'))
+
+        # 2. Test JS drawer state rendering in ide.js using Node.js
+        node_script = r'''
+const mockEl = (id) => ({
+  id,
+  style: {},
+  classList: {
+    classes: new Set(),
+    add(c) { this.classes.add(c); },
+    remove(c) { this.classes.delete(c); },
+    contains(c) { return this.classes.has(c); }
+  },
+  addEventListener: () => {},
+  innerHTML: '',
+  textContent: '',
+  setAttribute: () => {},
+  appendChild: () => {}
+});
+
+const elementsStore = {};
+global.document = {
+  getElementById: (id) => {
+    if (!elementsStore[id]) elementsStore[id] = mockEl(id);
+    return elementsStore[id];
+  },
+  querySelector: (s) => mockEl(s),
+  querySelectorAll: () => [],
+  createElement: (t) => mockEl(t),
+  addEventListener: () => {}
+};
+global.window = { addEventListener: () => {} };
+global.localStorage = { getItem: () => null, setItem: () => {} };
+global.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: true, data: { total_count: 86, by_language: {}, by_category: {}, languages_order: [], categories_order: [] } }) });
+global.CodeMirror = { fromTextArea: () => ({ getValue: () => 'print(1)', setValue: () => {}, on: () => {}, refresh: () => {}, clearHistory: () => {}, getCursor: () => ({ line: 0, ch: 0 }), setCursor: () => {} }) };
+
+const fs = require('fs');
+let code = fs.readFileSync('web/static/js/ide.js', 'utf8');
+code = code.replace('(function() {', 'global.__TEST_IDE = (function() {');
+const lastIdx = code.lastIndexOf('})();');
+code = code.substring(0, lastIdx) + 'return { state, elements, handlePipelineEvent, renderFinalReportStage }; })();';
+eval(code);
+
+const { state, elements, renderFinalReportStage } = global.__TEST_IDE;
+
+// Scenario A: Completed run with stages 1-10 passed, 1 passed + 2 warnings in 11-13
+state.editor = { getValue: () => 'print(1)', getCursor: () => ({ line: 0, ch: 0 }), setCursor: () => {} };
+state.pipeline.compiledSource = 'print(1)';
+state.pipeline.runRevision = 1;
+state.sourceRevisionId = 1;
+state.pipeline.isFinished = true;
+state.pipeline.finishStatus = 'warning';
+
+const mandatory = [
+  'source_input', 'lexical_analysis', 'syntax_analysis', 'ast_construction',
+  'semantic_analysis', 'symbol_table', 'ir_generation', 'optimization',
+  'code_generation', 'code_validation'
+];
+mandatory.forEach(id => {
+  state.pipeline.stageData[id] = { status: 'completed', duration_ms: 10, summary: 'OK' };
+});
+state.pipeline.stageData['security_analysis'] = { status: 'completed', duration_ms: 5 };
+state.pipeline.stageData['ai_security_analysis'] = { status: 'warning', duration_ms: 5 };
+state.pipeline.stageData['sandbox_execution'] = { status: 'warning', duration_ms: 5 };
+state.pipeline.stageData['final_report'] = { status: 'completed', duration_ms: 5 };
+
+renderFinalReportStage(state.pipeline.stages[13], state.pipeline.stageData['final_report'], 'warning', 5, 'BACKEND');
+const bodyA = elements.drawerStageBody.innerHTML;
+
+const results = {
+  scenarioA_gateBlocked: bodyA.includes('Completion Gate Blocked'),
+  scenarioA_reportGenerated: bodyA.includes('Final Report Generated'),
+  scenarioA_accuracyLabel: bodyA.match(/Mandatory stages \(1-10\)[^<]*/)?.[0] || '',
+  scenarioA_pipelineStatus: bodyA.includes('COMPLETED WITH WARNINGS') || bodyA.includes('SUCCESSFUL / COMPLETE')
+};
+
+// Scenario B: No run exists for current revision
+state.pipeline.compiledSource = 'print(2)'; // source modified
+state.pipeline.isFinished = false;
+renderFinalReportStage(state.pipeline.stages[13], state.pipeline.stageData['final_report'], 'pending', 0, 'BACKEND');
+const bodyB = elements.drawerStageBody.innerHTML;
+results.scenarioB_gateBlocked = bodyB.includes('Completion Gate Blocked');
+results.scenarioB_pendingPrereqs = bodyB.includes('PENDING PREREQUISITES');
+
+// Scenario C: Mandatory stage failed
+state.pipeline.compiledSource = 'print(1)';
+state.pipeline.isFinished = true;
+state.pipeline.stageData['syntax_analysis'] = { status: 'failed', duration_ms: 5, summary: 'Syntax error' };
+renderFinalReportStage(state.pipeline.stages[13], state.pipeline.stageData['final_report'], 'failed', 5, 'BACKEND');
+const bodyC = elements.drawerStageBody.innerHTML;
+results.scenarioC_gateBlocked = bodyC.includes('Completion Gate Blocked');
+
+console.log(JSON.stringify(results));
+'''
+        proc = subprocess.run(['node', '-e', node_script], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"Node script error: {proc.stderr}")
+        res = json.loads(proc.stdout.strip().splitlines()[-1])
+
+        # Scenario A: Completed run
+        self.assertFalse(res['scenarioA_gateBlocked'], "Drawer must NOT show gate blocked after completed run")
+        self.assertTrue(res['scenarioA_reportGenerated'], "Drawer must show 'Final Report Generated' directly")
+        self.assertTrue(res['scenarioA_pipelineStatus'], "Pipeline status must show successful/completed")
+        self.assertIn("Mandatory stages (1-10): 10/10 passed", res['scenarioA_accuracyLabel'])
+        self.assertIn("Stages 11-13: 1 passed, 2 warnings", res['scenarioA_accuracyLabel'])
+
+        # Scenario B & C: Gate shown when no run or mandatory stage failed
+        self.assertTrue(res['scenarioB_gateBlocked'], "Drawer must show gate blocked when no run exists for revision")
+        self.assertTrue(res['scenarioB_pendingPrereqs'], "Drawer must show PENDING PREREQUISITES when no run exists")
+        self.assertTrue(res['scenarioC_gateBlocked'], "Drawer must show gate blocked when mandatory stage failed")
+
+    def test_no_placeholder_after_completion(self):
+        """BUG 1: No placeholder ('Compilation Incomplete') after run completes with Stage 14 completed."""
+        node_script = r'''
+const mockEl = (id) => ({
+  id,
+  style: {},
+  classList: {
+    classes: new Set(),
+    add(c) { this.classes.add(c); },
+    remove(c) { this.classes.delete(c); },
+    contains(c) { return this.classes.has(c); }
+  },
+  addEventListener: () => {},
+  innerHTML: '',
+  textContent: '',
+  setAttribute: () => {},
+  appendChild: () => {}
+});
+
+const elementsStore = {};
+global.document = {
+  getElementById: (id) => {
+    if (!elementsStore[id]) elementsStore[id] = mockEl(id);
+    return elementsStore[id];
+  },
+  querySelector: (s) => mockEl(s),
+  querySelectorAll: () => [],
+  createElement: (t) => mockEl(t),
+  addEventListener: () => {}
+};
+global.window = { addEventListener: () => {} };
+global.localStorage = { getItem: () => null, setItem: () => {} };
+global.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: true, data: { total_count: 86, by_language: {}, by_category: {}, languages_order: [], categories_order: [] } }) });
+global.CodeMirror = { fromTextArea: () => ({ getValue: () => 'print(1)', setValue: () => {}, on: () => {}, refresh: () => {}, clearHistory: () => {}, getCursor: () => ({ line: 0, ch: 0 }), setCursor: () => {} }) };
+
+const fs = require('fs');
+let code = fs.readFileSync('web/static/js/ide.js', 'utf8');
+code = code.replace('(function() {', 'global.__TEST_IDE = (function() {');
+const lastIdx = code.lastIndexOf('})();');
+code = code.substring(0, lastIdx) + 'return { state, elements, handlePipelineEvent, showOutputWaitingState }; })();';
+eval(code);
+
+const { state, elements, handlePipelineEvent, showOutputWaitingState } = global.__TEST_IDE;
+
+state.editor = { getValue: () => 'print(1)', getCursor: () => ({ line: 0, ch: 0 }), setCursor: () => {} };
+state.pipeline.compiledSource = 'print(1)';
+state.pipeline.runRevision = 1;
+state.sourceRevisionId = 1;
+
+const mandatory = [
+  'source_input', 'lexical_analysis', 'syntax_analysis', 'ast_construction',
+  'semantic_analysis', 'symbol_table', 'ir_generation', 'optimization',
+  'code_generation', 'code_validation'
+];
+mandatory.forEach(id => {
+  state.pipeline.stageData[id] = { status: 'completed', duration_ms: 10, summary: 'OK' };
+});
+state.pipeline.stageData['final_report'] = { status: 'completed', duration_ms: 5 };
+
+// 1. Pipeline finishes with status warning and stage 14 complete
+handlePipelineEvent({
+  event: 'pipeline_finish',
+  status: 'warning',
+  artifacts: { output: 'hello output', ir_code: 'test ir' }
+});
+
+const res = {
+  completed_waitingStateDisplay: elements.outputWaitingState.style.display,
+  completed_tabsBarDisplay: elements.outputTabsBar.style.display,
+  completed_contentAreaDisplay: elements.outputContentArea.style.display
+};
+
+// 2. Failure case: Mandatory stage failed
+state.pipeline.stageData['optimization'] = { status: 'failed', duration_ms: 5, summary: 'Optimization error' };
+handlePipelineEvent({
+  event: 'pipeline_finish',
+  status: 'failed'
+});
+
+res.failed_waitingStateDisplay = elements.outputWaitingState.style.display;
+res.failed_waitingMessage = elements.outputWaitingMessage.textContent;
+
+// 3. Reset case: source modified
+showOutputWaitingState(
+  "Source Modified — Re-compilation Needed",
+  "Editor working buffer has changed. Click 'Run' to execute the sequential compiler pipeline on the new source."
+);
+res.reset_waitingStateDisplay = elements.outputWaitingState.style.display;
+res.reset_waitingMessage = elements.outputWaitingMessage.textContent;
+
+console.log(JSON.stringify(res));
+'''
+        proc = subprocess.run(['node', '-e', node_script], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"Node script error: {proc.stderr}")
+        res = json.loads(proc.stdout.strip().splitlines()[-1])
+
+        # After completed run: waiting state hidden, tabs shown
+        self.assertEqual(res['completed_waitingStateDisplay'], 'none')
+        self.assertEqual(res['completed_tabsBarDisplay'], 'flex')
+        self.assertEqual(res['completed_contentAreaDisplay'], 'block')
+
+        # When mandatory stage failed: waiting state visible with Compilation Incomplete
+        self.assertEqual(res['failed_waitingStateDisplay'], 'flex')
+        self.assertEqual(res['failed_waitingMessage'], 'Compilation Incomplete')
+
+        # When source changed: resets correctly to Source Modified
+        self.assertEqual(res['reset_waitingStateDisplay'], 'flex')
+        self.assertIn('Source Modified', res['reset_waitingMessage'])
+        self.assertIn('Re-compilation Needed', res['reset_waitingMessage'])
 
 
 if __name__ == '__main__':
