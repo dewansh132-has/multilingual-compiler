@@ -183,7 +183,7 @@
     ollamaPulseDot: document.getElementById("ollama-pulse-dot"),
     ollamaStatusLabel: document.getElementById("ollama-status-label"),
     btnScanSecurity: document.getElementById("btn-scan-security"),
-    btnUndoFix: document.getElementById("btn-undo-fix"),
+    btnUndoFix: document.getElementById("btn-undo-editor-fix") || document.getElementById("btn-undo-fix"),
     securityEmptyState: document.getElementById("security-empty-state"),
     securityFindingsList: document.getElementById("security-findings-list"),
 
@@ -848,7 +848,10 @@
         // Update CodeMirror
         state.editor.setValue(workingSource);
         state.editor.clearHistory();
-        state.security.undoStack = [];
+        // Do not clear the undo stack on working-copy load unless explicit force restore was requested
+        if (forceRestore) {
+          state.security.undoStack = [];
+        }
         state.findingsStore = {};
         state.findingFixes = {};
         resetPipelineStepper();
@@ -2287,7 +2290,10 @@
         let badgeHtml = `<span class="stage-finding-badge badge-${sevClass}">${escapeHtml(sev)}</span>`;
         let cardStatusClass = `sev-${sevClass}`;
         let statusLabel = escapeHtml(f.status || 'Active');
-        if (f.status === "pending_validation") {
+        if (f.status === "needs_manual_fix" || f.is_manual || f.manual_reason) {
+          badgeHtml = '<span class="stage-finding-badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;">⚠ NEEDS MANUAL FIX</span>';
+          statusLabel = "Needs manual fix";
+        } else if (f.status === "pending_validation") {
           badgeHtml = '<span class="stage-finding-badge" style="background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD;">⟳ PENDING VALIDATION</span>';
           statusLabel = "Pending Validation (Fix Applied)";
         } else if (f.validation_status === "validation_failed") {
@@ -2296,6 +2302,23 @@
         } else if (f.status === "fix_proposed") {
           badgeHtml = '<span class="stage-finding-badge" style="background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD;">✨ FIX PROPOSED</span>';
           statusLabel = "Fix Proposed (Review Diff)";
+        }
+
+        let manualBoxHtml = "";
+        if (f.status === "needs_manual_fix" || f.is_manual || f.manual_reason) {
+          const mReason = f.manual_reason || f.reason || "Automated patch requires architectural context or was rejected.";
+          manualBoxHtml = `
+            <div class="stage-finding-manual-box" style="margin-top: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 4px; padding: 8px;">
+              <div style="color: #d97706; font-size: 12px; font-weight: 600;">⚠ Why this cannot be auto-fixed:</div>
+              <div style="color: #475569; font-size: 12px; margin-top: 2px;">${escapeHtml(mReason)}</div>
+              ${remText ? `
+                <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px; font-weight: 600; color: #475569;">Recommended Code:</span>
+                  <button class="btn btn-secondary btn-sm btn-copy-manual-snippet" data-snippet="${escapeHtml(remText)}" style="font-size: 11px; padding: 2px 6px;">📋 Copy Code</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
         }
 
         cardsHtml += `
@@ -2320,6 +2343,7 @@
 
             ${impactHtml}
             ${remHtml}
+            ${manualBoxHtml}
 
             <div class="stage-finding-actions">
               <span style="font-size: 11px; color: #64748B;">
@@ -2554,6 +2578,19 @@
       });
     });
 
+    // Bind Copy Manual Snippet Buttons
+    elements.drawerStageBody.querySelectorAll(".btn-copy-manual-snippet").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const snippet = btn.getAttribute("data-snippet") || "";
+        if (snippet && navigator.clipboard) {
+          navigator.clipboard.writeText(snippet);
+          const orig = btn.textContent;
+          btn.textContent = "✓ Copied!";
+          setTimeout(() => { btn.textContent = orig; }, 2000);
+        }
+      });
+    });
+
     // Re-hydrate any already proposed fixes for findings in this stage
     stageFindings.forEach(f => {
       const fid = String(f.id || "");
@@ -2646,12 +2683,10 @@
       });
 
       const data = await resp.json();
-      if (!data.success && (!data.fixes || data.fixes.length === 0)) {
+      if (!data.success && (!data.fixes || data.fixes.length === 0) && (!data.manual_fixes || data.manual_fixes.length === 0)) {
         if (progress) progress.style.display = "none";
         if (btn) btn.disabled = false;
-        alert(`Ollama AI was unable to generate safe corrections for this stage:\n\n${data.error || data.explanation || 'No safe patch could be determined.'}`);
         setStatus("Fix All was unable to resolve stage issues", "warning");
-        return;
       }
 
       if (progress) progress.style.display = "none";
@@ -2663,7 +2698,7 @@
       console.error("Fix All error:", err);
       if (progress) progress.style.display = "none";
       if (btn) btn.disabled = false;
-      alert(`Fix All request failed: ${err.message}`);
+      setStatus(`Fix All request failed: ${err.message}`, 'error');
       setStatus("Fix All request error", "error");
     }
   }
@@ -2753,6 +2788,32 @@
         });
       }
 
+      const summaryBanner = `
+        <div class="fix-modal-summary-banner" style="padding: 10px 14px; background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 6px; margin-bottom: 12px; font-size: 13px; color: #f8fafc;">
+          <div style="font-weight: 600; margin-bottom: 4px;">
+            Remediation Summary: Fixed ${applied.length}, Needs Manual ${manual.length}, Rejected ${rejected.length}
+          </div>
+          <div style="color: #94a3b8; font-size: 12px; line-height: 1.4;">
+            ${applied.length > 0 ? `✓ ${applied.length} issue(s) automatically neutralized.` : ''}
+            ${manual.length > 0 ? ` ⚠ ${manual.length} issue(s) require manual code modification.` : ''}
+            ${rejected.length > 0 ? ` ✕ ${rejected.length} fix(es) rejected due to regression risks.` : ''}
+          </div>
+        </div>
+      `;
+
+      if (applied.length === 0) {
+        const failureNotice = `
+          <div class="fix-modal-failure-notice" style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; margin-bottom: 12px; color: #fecaca; font-size: 12px;">
+            <strong>✕ Auto-Remediation Notice:</strong> No automated safe fix could be applied for the detected issues.
+            <div style="margin-top: 4px;"><strong>Reason:</strong> ${escapeHtml(data.error || data.explanation || 'Fix was rejected or requires manual developer review.')}</div>
+            <div style="margin-top: 4px;"><strong>Recommended Action:</strong> Copy the suggested manual remediation code snippet from the cards below into your editor.</div>
+          </div>
+        `;
+        html = summaryBanner + failureNotice + html;
+      } else {
+        html = summaryBanner + html;
+      }
+
       if (html) {
         resultsPanel.innerHTML = html;
         resultsPanel.style.display = 'flex';
@@ -2764,8 +2825,13 @@
     if (elements.fixSplitBefore) elements.fixSplitBefore.textContent = state.editor.getValue();
     if (elements.fixSplitAfter) elements.fixSplitAfter.textContent = data.proposed_source || "";
 
-    elements.btnApplyFix.disabled = false;
-    elements.btnApplyFix.textContent = `Apply All Fixes to Working Buffer (${resCount} Fixes)`;
+    if (applied.length === 0) {
+      elements.btnApplyFix.disabled = true;
+      elements.btnApplyFix.textContent = "No Auto-Fix Available — Manual Fix Required";
+    } else {
+      elements.btnApplyFix.disabled = false;
+      elements.btnApplyFix.textContent = `Apply All Fixes to Working Buffer (${resCount} Fixes)`;
+    }
 
     state.security.pendingFix = {
       is_fix_all: true,
@@ -4072,13 +4138,17 @@
         return;
       }
       if (!applyResp.ok || !applyData.success) {
+        if (elements.btnApplyFix) {
+          elements.btnApplyFix.disabled = false;
+          elements.btnApplyFix.textContent = "Cannot Apply — Manual Fix Required";
+        }
         const resultsPanel = document.getElementById("fix-modal-results-panel");
         const errText = applyData.error || "Validation failed.";
         if (resultsPanel) {
           resultsPanel.innerHTML = `
-            <div class="fix-result-item error-banner">
+            <div class="fix-result-item error-banner" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fecaca; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
               <strong>✕ Patch Application Rejected:</strong> ${escapeHtml(errText)}<br>
-              <em>The working source code was not modified to prevent regression.</em>
+              <div style="margin-top: 4px;"><em>What to do:</em> The automated patch introduced compiler or security regressions. Please inspect the code snippet below and implement the fix manually in the editor.</div>
             </div>
           ` + resultsPanel.innerHTML;
           resultsPanel.style.display = "flex";

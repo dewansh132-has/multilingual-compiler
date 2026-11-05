@@ -1,4 +1,5 @@
 --- SYMBOL TABLE (SEMANTICS) ---
 Variable Name	| Type	| Current Value
 --------------------------------------------------
-a	| int	| 10
+greeting	| str	| Hello, Multilingual VITAL!
+x	| int	| 42

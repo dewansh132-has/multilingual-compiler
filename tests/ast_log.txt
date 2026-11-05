@@ -2,12 +2,27 @@
 
 Module (Root)
 ├── Assign
-│   ├── Name (id='a')
+│   ├── Name (id='greeting')
 │   │   └── Store
-│   └── Constant (value=10)
+│   └── Constant (value='Hello, Multilingual VITAL!')
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Name (id='greeting')
+│           └── Load
+├── Assign
+│   ├── Name (id='x')
+│   │   └── Store
+│   └── Constant (value=42)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='The value :')
 └── Expr
     └── Call
         ├── Name (id='print')
         │   └── Load
-        └── Name (id='a')
+        └── Name (id='x')
             └── Load

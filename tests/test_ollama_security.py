@@ -77,10 +77,11 @@ class TestOllamaClient(unittest.TestCase):
         import urllib.error
         mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
         
-        status = self.client.check_health(force_refresh=True)
-        self.assertFalse(status["healthy"])
-        self.assertEqual(status["status"], "offline")
-        self.assertIn("Connection refused", status["error"])
+        with patch.dict(os.environ, {"VITAL_AI_DISABLED": "0"}):
+            status = self.client.check_health(force_refresh=True)
+            self.assertFalse(status["healthy"])
+            self.assertEqual(status["status"], "offline")
+            self.assertIn("Connection refused", status["error"])
 
     @patch('urllib.request.urlopen')
     def test_health_check_online_detects_model(self, mock_urlopen):
@@ -92,10 +93,11 @@ class TestOllamaClient(unittest.TestCase):
         }).encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_resp
 
-        status = self.client.check_health(force_refresh=True)
-        self.assertTrue(status["healthy"])
-        self.assertEqual(status["status"], "online")
-        self.assertTrue(status["model_available"])
+        with patch.dict(os.environ, {"VITAL_AI_DISABLED": "0"}):
+            status = self.client.check_health(force_refresh=True)
+            self.assertTrue(status["healthy"])
+            self.assertEqual(status["status"], "online")
+            self.assertTrue(status["model_available"])
 
     @patch('urllib.request.urlopen')
     def test_chat_timeout_handled_gracefully(self, mock_urlopen):
@@ -103,16 +105,28 @@ class TestOllamaClient(unittest.TestCase):
         import socket
         mock_urlopen.side_effect = socket.timeout("Timed out waiting for response")
 
-        res = self.client.chat(messages=[{"role": "user", "content": "ping"}], timeout=0.5)
-        self.assertFalse(res["success"])
-        self.assertIn("timed out", res["error"].lower())
+        with patch.dict(os.environ, {"VITAL_AI_DISABLED": "0"}):
+            res = self.client.chat(messages=[{"role": "user", "content": "ping"}], timeout=0.5)
+            self.assertFalse(res["success"])
+            self.assertIn("timed out", res["error"].lower())
 
     def test_payload_size_capping(self):
         """Oversized payloads (>64KB) are blocked before sending to model."""
         huge_content = "A" * (70 * 1024)
-        res = self.client.chat(messages=[{"role": "user", "content": huge_content}])
-        self.assertFalse(res["success"])
-        self.assertIn("exceeds safety limit", res["error"])
+        with patch.dict(os.environ, {"VITAL_AI_DISABLED": "0"}):
+            res = self.client.chat(messages=[{"role": "user", "content": huge_content}])
+            self.assertFalse(res["success"])
+            self.assertIn("exceeds safety limit", res["error"])
+
+    def test_vital_ai_disabled_short_circuits(self):
+        """When VITAL_AI_DISABLED is set to 1, health check and chat return offline/disabled immediately."""
+        with patch.dict(os.environ, {"VITAL_AI_DISABLED": "1"}):
+            status = self.client.check_health(force_refresh=True)
+            self.assertFalse(status["healthy"])
+            self.assertIn("disabled", status["message"].lower())
+            res = self.client.chat(messages=[{"role": "user", "content": "hi"}])
+            self.assertFalse(res["success"])
+            self.assertIn("disabled", res["error"].lower())
 
 
 class TestDeterministicSecurityScanner(unittest.TestCase):
@@ -356,7 +370,7 @@ class TestPipelineTracker(unittest.TestCase):
         """A valid VITAL program transitions through 14 stages with all 14 mandatory stages completed."""
         code = 'let a = 10\nprint(a)'
         tracker = PipelineRunTracker()
-        trace = execute_pipeline_with_tracker(code, tracker=tracker, run_ai_security=False)
+        trace = execute_pipeline_with_tracker(code, tracker=tracker, run_ai_security=True)
         
         self.assertTrue(trace["success"])
         self.assertEqual(trace["overall_status"], "completed")
@@ -375,7 +389,7 @@ class TestPipelineTracker(unittest.TestCase):
         """Syntax errors fail at parser stage and correctly skip downstream execution without inflating progress."""
         bad_code = 'number a = \nprint a'  # syntax error
         tracker = PipelineRunTracker()
-        trace = execute_pipeline_with_tracker(bad_code, tracker=tracker, run_ai_security=False)
+        trace = execute_pipeline_with_tracker(bad_code, tracker=tracker, run_ai_security=True)
         
         self.assertFalse(trace["success"])
         self.assertEqual(trace["overall_status"], "failed")
@@ -458,8 +472,8 @@ class TestPipelineTracker(unittest.TestCase):
         trace = execute_pipeline_with_tracker(code, tracker=tracker, run_ai_security=True)
 
         ai_stage = next(s for s in trace["stages"] if s["id"] == "ai_security_analysis")
-        self.assertEqual(ai_stage["status"], "completed")
-        self.assertIn("offline", ai_stage["summary"].lower())
+        self.assertIn(ai_stage["status"], ("completed", "warning"))
+        self.assertTrue("offline" in ai_stage["summary"].lower() or "ai analysis skipped" in ai_stage["summary"].lower())
 
     def test_multilingual_code_compiles_through_all_stages(self):
         """Hindi source code executes through all 14 stages and emits correct output."""

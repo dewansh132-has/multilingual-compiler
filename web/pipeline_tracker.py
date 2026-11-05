@@ -177,6 +177,10 @@ class PipelineRunTracker:
         self.source_revision = source_revision
         self.source_hash = source_hash
         self.applied_fixes: List[str] = []
+        self.resolved_findings: List[Dict[str, Any]] = []
+        self.manual_findings: List[Dict[str, Any]] = []
+        self.initial_risk_score: Optional[int] = None
+        self.current_risk_score: int = 0
         self.file_path: str = ""
         self.start_time = time.time()
         self.end_time: Optional[float] = None
@@ -1255,11 +1259,25 @@ def execute_pipeline_with_tracker(
         f"SECTION 9: EXECUTION RESULTS\n"
         f"• Sandbox Execution:   {runner_res.get('execution_status', 'completed').upper()} ({runner_res.get('elapsed_ms', 0)} ms)\n"
         f"• Runtime Output:      tests/output.txt\n\n"
-        f"SECTION 10: AI REMEDIATION & SECURITY AUDIT\n"
-        f"• Static Findings:     {len(findings)} Issue(s) Detected (Risk Score: {sec_results.get('overall_risk_score', 0)}/100)\n"
-        f"• Ollama AI Status:    {ai_status.get('model', 'qwen2.5-coder:7b-instruct')} ({'Online' if ai_status.get('online') else 'Offline'})\n"
-        + ("\n".join(f"  • Line {f.get('line', 1)}: [{f.get('severity', 'Medium')}] {f.get('cwe_id') or f.get('rule_id', 'CWE-Unknown')} - {f.get('title', '')}" for f in findings) + "\n" if findings else "  • No security issues detected.\n") + "\n"
-        f"SECTION 10B: APPLIED REMEDIATION FIXES\n"
+        f"SECTION 10: SECURITY AUDIT & RISK SCORE\n"
+        f"• Risk Score:          {sec_results.get('overall_risk_score', 0)}/100"
+        + (f" (Before Fix: {tracker.initial_risk_score}/100 -> After Fix: {sec_results.get('overall_risk_score', 0)}/100)\n" if tracker.initial_risk_score is not None else "\n")
+        + f"• Current Findings:    {len(findings)} Active Finding(s)\n"
+        f"• Ollama AI Status:    {ai_status.get('model', 'qwen2.5-coder:7b-instruct')} ({'Online' if ai_status.get('online') else 'Offline'})\n\n"
+        f"SECTION 10B: RESOLVED FINDINGS\n"
+        + (f"• Total Resolved:      {len(tracker.resolved_findings)} issue(s) neutralized\n"
+           + "\n".join(f"  ✓ [{rf.get('rule_id') or rf.get('id', 'Fix')}] {rf.get('title') or rf.get('explanation', 'Resolved')}" for rf in tracker.resolved_findings) + "\n\n"
+           if tracker.resolved_findings else "• No prior findings resolved in this revision.\n\n")
+        + f"SECTION 10C: REMAINING FINDINGS (MANUAL)\n"
+        + (f"• Total Manual:        {len(tracker.manual_findings or [f for f in findings if f.get('status') == 'needs_manual_fix' or f.get('is_manual')])} finding(s) requiring manual remediation\n"
+           + "\n".join(
+               f"  ⚠ [{mf.get('rule_id') or mf.get('cwe_id') or 'Manual'}] Line {mf.get('line', '?')}: {mf.get('title', '')}\n"
+               f"    Why: {mf.get('reason') or mf.get('explanation', 'Requires developer architectural review.')}\n"
+               f"    Recommended Fix:\n      {mf.get('recommended_code') or mf.get('remediation', '// Manual fix needed')}"
+               for mf in (tracker.manual_findings or [f for f in findings if f.get('status') == 'needs_manual_fix' or f.get('is_manual')])
+           ) + "\n\n"
+           if (tracker.manual_findings or [f for f in findings if f.get('status') == 'needs_manual_fix' or f.get('is_manual')]) else "• None. All findings neutralized.\n\n")
+        + f"SECTION 10D: APPLIED REMEDIATION FIXES\n"
         f"• Status:              {'None (Pristine demo unmodified)' if not tracker.applied_fixes else f'{len(tracker.applied_fixes)} fix(es) applied'}\n\n"
         f"SECTION 11: FINAL COMPILATION VERDICT\n"
         f"================================================================================\n"

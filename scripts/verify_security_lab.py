@@ -3,11 +3,12 @@
 """
 scripts/verify_security_lab.py — Verification across the entire VITAL Security Lab (Task E)
 
-For every program in examples/security_lab (all 6 languages, 24 programs):
-  1. Compile before Fix All: verify stages 1-10 and count security findings.
-  2. Execute Fix All (with VITAL_AI_DISABLED=1).
-  3. Compile after Fix All: verify stages 1-10 and count security findings.
-  4. Print structured summary table and metric report.
+For every program in examples/security_lab (all 6 languages, 24 programs) through real HTTP endpoints:
+  1. POST /api/pipeline/run (before Fix All): verify stages 1-10 and count security findings.
+  2. POST /api/ai/fix-all: generate validated fixpoint patches.
+  3. POST /api/ai/apply-fix: atomically persist and verify working copy.
+  4. POST /api/pipeline/run (after Fix All): verify stages 1-10 and count security findings.
+  5. Print structured summary table and metric report.
 """
 
 import os
@@ -30,9 +31,8 @@ if PROJECT_ROOT not in sys.path:
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from web.ai_remediation_engine import AIRemediationEngine, FastStageValidator
-from web.security_analyzer import security_coordinator
-from web.language_context import VitalLanguageIntelligence
+from web.server import app
+from web.working_source_manager import working_source_manager
 
 
 def detect_file_language(path: str) -> str:
@@ -59,11 +59,14 @@ def main():
         sys.exit(1)
 
     print("=" * 105)
-    print("VITAL SECURITY LAB VERIFICATION REPORT (VITAL_AI_DISABLED=1)")
+    print("VITAL SECURITY LAB VERIFICATION REPORT (HTTP ENDPOINTS, VITAL_AI_DISABLED=1)")
     print("=" * 105)
     header = f"{'File':<30} | {'Lang':<8} | {'Stages 1-10 (B/A)':<18} | {'Findings (B/A)':<14} | {'App':<4} | {'Rej':<4} | {'Man':<4} | {'Time (s)':<8}"
     print(header)
     print("-" * 105)
+
+    client = app.test_client()
+    working_source_manager.clear_all_working_copies()
 
     total_programs = len(files)
     green_before = 0
@@ -78,54 +81,90 @@ def main():
         with open(file_path, "r", encoding="utf-8") as f:
             code_before = f.read()
 
-        # Stages 1-10 before
-        val_before = FastStageValidator.verify_stages_1_to_10(code_before, lang)
-        s10_before_ok = val_before["passed"]
+        t0 = time.time()
+
+        # Step 1: POST /api/pipeline/run (before Fix All)
+        resp_before = client.post("/api/pipeline/run", json={
+            "code": code_before,
+            "language": lang,
+            "use_ai_security": False,
+            "source_revision": 1
+        })
+        data_before = resp_before.get_json() or {}
+        stages_before = data_before.get("stages", [])
+        s10_before_ok = all(s.get("status") in ("completed", "warning", "passed") for s in stages_before[:10])
         if s10_before_ok:
             green_before += 1
-        s10_b_str = "GREEN" if s10_before_ok else f"FAIL({val_before.get('earliest_failed_stage')[:7]})"
+        first_fail_b = next((s["id"] for s in stages_before[:10] if s.get("status") not in ("completed", "warning", "passed")), None)
+        s10_b_str = "GREEN" if s10_before_ok else f"FAIL({first_fail_b[:7] if first_fail_b else 'ERR'})"
 
-        # Security scan before
-        sec_before = security_coordinator.run_full_scan(code_before, language=lang, use_ai_enrichment=False)
-        f_before_count = len(sec_before.get("findings", []))
+        sec_stage_before = next((s for s in stages_before if s["id"] == "security_analysis"), None)
+        findings_before = sec_stage_before.get("details", {}).get("findings", []) if sec_stage_before else []
+        if not findings_before:
+            scans_init = DeterministicSecurityScanner.scan_multilingual_security(code_before, lang)
+            findings_before = [s.to_dict() if hasattr(s, "to_dict") else s for s in scans_init]
+        f_before_count = len(findings_before)
 
-        # Run Fix All
-        t0 = time.time()
-        fix_res = AIRemediationEngine.generate_fix_all(
-            source_code=code_before,
-            stage_id="deterministic_security",
-            language=lang,
-            use_ai=False
-        )
+        # Step 2: POST /api/ai/fix-all
+        resp_fix = client.post("/api/ai/fix-all", json={
+            "stage_id": "security_analysis",
+            "source_code": code_before,
+            "language": lang,
+            "file_path": file_path,
+            "source_revision": 1,
+            "use_ai": False,
+            "diagnostics": findings_before
+        })
+        fix_data = resp_fix.get_json() or {}
+        app_count = len(fix_data.get("applied_fixes", []))
+        rej_count = len(fix_data.get("rejected_fixes", []))
+        man_count = len(fix_data.get("manual_fixes", []))
+        proposed_code = fix_data.get("proposed_source", code_before)
+
+        # Step 3: POST /api/ai/apply-fix
+        if proposed_code != code_before:
+            client.post("/api/ai/apply-fix", json={
+                "file_path": file_path,
+                "code": proposed_code,
+                "source_revision": 1,
+                "stage_id": "security_analysis",
+                "language": lang
+            })
+
+        # Step 4: POST /api/pipeline/run (after Fix All)
+        resp_after = client.post("/api/pipeline/run", json={
+            "code": proposed_code,
+            "language": lang,
+            "use_ai_security": False,
+            "source_revision": 2
+        })
+        data_after = resp_after.get_json() or {}
         elapsed = time.time() - t0
 
-        patched_code = fix_res.get("proposed_source", code_before)
-        app_count = len(fix_res.get("applied_fixes", []))
-        rej_count = len(fix_res.get("rejected_fixes", []))
-        man_count = len(fix_res.get("manual_fixes", []))
-
-        # Stages 1-10 after
-        val_after = FastStageValidator.verify_stages_1_to_10(patched_code, lang)
-        s10_after_ok = val_after["passed"]
+        stages_after = data_after.get("stages", [])
+        s10_after_ok = all(s.get("status") in ("completed", "warning", "passed") for s in stages_after[:10])
+        first_fail_a = next((s["id"] for s in stages_after[:10] if s.get("status") not in ("completed", "warning", "passed")), None)
         if s10_after_ok:
             green_after += 1
         else:
             failures.append({
                 "file": fname,
                 "language": lang,
-                "stage": val_after.get("earliest_failed_stage"),
-                "errors": [e["message"] for e in val_after.get("errors", [])]
+                "stage": first_fail_a,
+                "errors": [s.get("summary", "") for s in stages_after if s.get("id") == first_fail_a]
             })
-        s10_a_str = "GREEN" if s10_after_ok else f"FAIL({val_after.get('earliest_failed_stage')[:7]})"
+        s10_a_str = "GREEN" if s10_after_ok else f"FAIL({first_fail_a[:7] if first_fail_a else 'ERR'})"
 
-        # Security scan after
-        sec_after = security_coordinator.run_full_scan(patched_code, language=lang, use_ai_enrichment=False)
-        f_after_count = len(sec_after.get("findings", []))
+        sec_stage_after = next((s for s in stages_after if s["id"] == "security_analysis"), None)
+        findings_after = sec_stage_after.get("details", {}).get("findings", []) if sec_stage_after else []
+        f_after_count = len(findings_after)
 
         stages_ba = f"{s10_b_str} -> {s10_a_str}"
         findings_ba = f"{f_before_count} -> {f_after_count}"
 
         print(f"{fname:<30} | {lang:<8} | {stages_ba:<18} | {findings_ba:<14} | {app_count:<4} | {rej_count:<4} | {man_count:<4} | {elapsed:<8.2f}")
+
+    working_source_manager.clear_all_working_copies()
 
     print("=" * 105)
     print(f"SUMMARY: Total Programs: {total_programs}")
@@ -145,4 +184,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

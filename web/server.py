@@ -245,6 +245,9 @@ def ai_fix_all():
     source_revision = int(data.get('source_revision', 1))
     file_path = data.get('file_path', '')
     preferred_model = data.get('preferred_model')
+    use_ai = bool(data.get('use_ai', True))
+    if os.environ.get("VITAL_AI_DISABLED") == "1":
+        use_ai = False
 
     deep_fix = bool(data.get('deep_fix', False))
 
@@ -256,6 +259,7 @@ def ai_fix_all():
         language=language,
         source_revision=source_revision,
         file_path=file_path,
+        use_ai=use_ai,
         preferred_model=preferred_model,
         deep_fix=deep_fix
     )
@@ -821,14 +825,17 @@ def pipeline_generate_report():
     if not code or not code.strip():
         return jsonify({"success": False, "error": "Source code is empty"}), 400
 
+    source_revision = int(data.get('source_revision', 1))
+
     # Execute full pipeline with auto_generate_report to assemble genuine artifacts
-    tracker = PipelineRunTracker(run_id=run_id)
+    tracker = PipelineRunTracker(run_id=run_id, source_revision=source_revision)
     execute_pipeline_with_tracker(
         source_code=code,
         language_hint=language,
         run_ai_security=False,
         tracker=tracker,
-        pause_on_error=False
+        pause_on_error=False,
+        source_revision=source_revision
     )
 
     t_dict = tracker.to_dict()
@@ -873,6 +880,7 @@ def pipeline_generate_report():
         "artifacts": result.get("artifacts"),
         "elapsed_ms": result.get("elapsed_ms"),
         "stages": result.get("stages"),
+        "source_revision": source_revision,
         "is_incomplete": bool(failed_mandatory)
     })
 

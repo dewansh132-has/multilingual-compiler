@@ -20,6 +20,8 @@ BASE_BUILTIN_NAMES = {
     "print", "input", "len", "range", "int", "str", "float", "bool",
     "list", "dict", "set", "tuple", "abs", "min", "max", "sum", "round",
     "sorted", "open", "eval", "exec", "compile", "type", "isinstance",
+    # Multilingual dynamic evaluation aliases (Stage 11 security analyzes these)
+    "मूल्यांकन", "మూల్యాంకనం", "মূল্যায়ন", "मूल्यांकन_करा", "मूल्याङ्कन",
     # str-conversion helpers
     "chr", "ord", "bin", "hex", "oct", "repr", "format", "ascii",
     # Common constants & primitives

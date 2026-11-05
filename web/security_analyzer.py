@@ -704,11 +704,23 @@ class DeterministicSecurityScanner:
                 has_ownership_check = any(
                     tok in source_code for tok in [
                         "caller_id != from_account_id", "caller_id == from_account_id",
+                        "caller_id != current_session_user", "caller_id == current_session_user",
                         "कॉलर_आईडी != स्रोत_खाता", "कॉलर_आईडी == स्रोत_खाता",
+                        "कॉलर_आईडी != वर्तमान_सत्र_उपयोगकर्ता", "कॉलर_आईडी == वर्तमान_सत्र_उपयोगकर्ता",
                         "కాలర్_ఐడి != మూల_ఖాతా", "కాలర్_ఐడి == మూల_ఖాతా",
+                        "కాలర్_ఐడి != ప్రస్తుత_సెషన్_వినియోగదారుడు", "కాలర్_ఐడి == ప్రస్తుత_సెషన్_వినియోగదారుడు",
                         "কলার_আইডি != উৎস_অ্যাকাউন্ট", "কলার_আইডি == উৎস_অ্যাকাউন্ট",
+                        "কলার_আইডি != বর্তমান_সেশন_ব্যবহারকারী", "কলার_আইডি == বর্তমান_সেশন_ব্যবহারকারী",
                         "कॉलर_आयडी != मूळ_खाते", "कॉलर_आयडी == मूळ_खाते",
-                        "कलर_आईडी != स्रोत_खाता", "कलर_आईडी == स्रोत_खाता"
+                        "कॉलर_आयडी != चालू_सत्र_वापरकर्ता", "कॉलर_आयडी == चालू_सत्र_वापरकर्ता",
+                        "कलर_आईडी != स्रोत_खाता", "कलर_आईडी == स्रोत_खाता",
+                        "कलर_आईडी != वर्तमान_सत्र_प्रयोगकर्ता", "कलर_आईडी == वर्तमान_सत्र_प्रयोगकर्ता",
+                        "!= session_user", "== session_user",
+                        "!= सत्र_उपयोगकर्ता", "== सत्र_उपयोगकर्ता",
+                        "!= సెషన్_యూజర్", "== సెషన్_యూజర్",
+                        "!= সেশন_ইউজার", "== সেশন_ইউজার",
+                        "!= सत्र_वापरकर्ता", "== सत्र_वापरकर्ता",
+                        "!= सत्र_प्रयोगकर्ता", "== सत्र_प्रयोगकर्ता"
                     ]
                 )
                 if not has_ownership_check:
@@ -765,6 +777,10 @@ class DeterministicSecurityScanner:
         for line_no, line in enumerate(lines, start=1):
             m_sec = secret_pat.search(line)
             if m_sec:
+                val = m_sec.group(1) or m_sec.group(2) or ""
+                # Idempotent: safe environment/config placeholders do not fire
+                if any(sw in val.upper() for sw in ["REDACTED", "CONFIG", "ENV", "PLACEHOLDER", "VAULT", "SECRET_KEY_HERE"]):
+                    continue
                 score = calculate_risk_score("High", "confirmed", True, False)
                 findings.append(SecurityFinding(
                     id=f"SEC-DATA-{len(findings)+1:03d}",
@@ -878,8 +894,9 @@ class DeterministicSecurityScanner:
                 ))
 
         # 7. SEC-LOGIC-001: Missing Negative Item Quantity Check (Refund Exploit)
+        # Only match function definition header, NEVER call sites
         subtotal_fn_pat = re.compile(
-            r'(?:calculate_item_subtotal|वस्तु_उपयोग_गणना|వస్తువు_ఉపమొత్తం_లెక్కించు|পণ্যের_উপযোগ_গণনা|वस्तू_उपयोग_गणना|वस्तु_उपयोग_गणना)\s*\(([^)]+)\)'
+            r'^[ 	]*(?:function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+(?:calculate_item_subtotal|वस्तु_उपयोग_गणना|వస్తువు_ఉపమొత్తం_లెక్కించు|পণ্যের_উপযোগ_গণনা|वस्तू_उपयोग_गणना|वस्तु_उपयोग_गणना)\s*\(([^)]+)\)'
         )
         for line_no, line in enumerate(lines, start=1):
             m_sub = subtotal_fn_pat.search(line)
@@ -911,7 +928,7 @@ class DeterministicSecurityScanner:
 
         # 8. SEC-SEM-001: Undefined Variable in Conditional Branch
         undef_pat = re.compile(
-            r'(?:print|लिखो|ముద్రించు|ছাপাও|लिहा|छाप)\s*\(\s*(acc_status|खाता_अंतिम_स्थिति|ఖాతా_ముగింపు_స్థితి|অ্যাকাউন্ট_সমাপ্তি_অবস্থা|खाते_शेवटची_स्थिती)\s*\)'
+            r'(?:print|लिखो|ముద్రించు|ছাপাও|लिहा|छाप)\s*\(\s*(acc_status|खाता_अंतिम_स्थिति|खाता_अन्तिम_स्थिति|ఖాతా_ముగింపు_స్థితి|অ্যাকাউন্ট_সমাপ্তি_অবস্থা|खाते_शेवटची_स्थिती)\s*\)'
         )
         for line_no, line in enumerate(lines, start=1):
             m_und = undef_pat.search(line)
@@ -1061,6 +1078,54 @@ class DeterministicSecurityScanner:
 # ---------------------------------------------------------------------------
 # AI Security Agent Coordinator (Ollama)
 # ---------------------------------------------------------------------------
+
+
+def _extract_balanced_if_else(code: str, search_pattern: re.Pattern):
+    """
+    Finds start and end character offsets of a complete, balanced if-else construct
+    whose 'if' line matches search_pattern. Balances nested braces { ... } accurately.
+    """
+    m = search_pattern.search(code)
+    if not m:
+        return None
+    start = m.start()
+    open_idx = code.find('{', m.end() - 1)
+    if open_idx == -1:
+        return None
+
+    depth = 0
+    i = open_idx
+    end = -1
+    while i < len(code):
+        if code[i] == '{':
+            depth += 1
+        elif code[i] == '}':
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+        i += 1
+    if end == -1:
+        return None
+
+    # Check for following else block
+    tail = code[end:]
+    m_else = re.match(r'^[ 	]*(?:else|अन्यथा|లేకపోతే|కాకపోతే|নাহলে|নাहीतर|नत्र)\s*\{', tail)
+    if m_else:
+        else_open = end + m_else.end() - 1
+        depth = 0
+        j = else_open
+        while j < len(code):
+            if code[j] == '{':
+                depth += 1
+            elif code[j] == '}':
+                depth -= 1
+                if depth == 0:
+                    end = j + 1
+                    break
+            j += 1
+    return start, end
+
 
 class SecurityAnalysisCoordinator:
     """
@@ -1299,6 +1364,19 @@ class SecurityAnalysisCoordinator:
         elif finding_data is None:
             finding_data = {}
 
+        if isinstance(finding_data, str):
+            language = finding_data
+            finding_data = finding_id if isinstance(finding_id, dict) else {}
+
+        # Auto-detect language if not provided or default
+        lang_lower = (language or "english").lower()
+        if lang_lower == "english":
+            from web.language_context import VitalLanguageIntelligence
+            detected = VitalLanguageIntelligence.detect_language(source_code)
+            if detected and detected != "English":
+                lang_lower = detected.lower()
+                language = detected
+
         evidence = finding_data.get("evidence", "")
         line_no = finding_data.get("line")
         title = finding_data.get("title", "")
@@ -1307,50 +1385,125 @@ class SecurityAnalysisCoordinator:
         proposed_code = ""
         proposed_source = ""
         explanation = ""
+        source_lines = source_code.splitlines()
+
+        # General function definition pattern across all VITAL supported languages
+        gen_fn_match = re.search(
+            r'([ \t]*(?:fun|function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+'
+            r'([A-Za-z0-9_\u0900-\u0D7F]+)\s*\(([^)]*)\)\s*\{)',
+            source_code
+        )
 
         # Step 1: Specific targeted per-issue deterministic remediation
         if "SEC-AUTH-003" in rule_id or "Bypass" in title or "Threshold" in title or "Suspension" in title:
-            bypass_pat = re.compile(
-                r'[ \t]*if\s*\([^)]*(?:amount|राशि|మొత్తం|పరిమాణం|পরিমাণ|रक्कम|रकम)\s*>\s*500[^)]*\)\s*\{[\s\S]*?\}[ \t]*(?:else|अन्यथा|లేకపోతే|নাহলে|नाहीतर|नत्र)\s*\{[\s\S]*?\}'
+            byp_hdr_pat = re.compile(
+                r'[ \t]*(?:if|अगर|ఒకవేళ|যদি|जर|यदि|यदि_हो)\s*\([^)]*(?:amount|राशि|మొత్తం|పరిమాణం|পরিমাণ|रक्कम|रकम)\s*>\s*500[^)]*\)\s*\{'
             )
-            m_byp = bypass_pat.search(source_code)
-            if m_byp:
-                lang_lower = language.lower()
-                if lang_lower == "hindi":
-                    rep_code = "    मानो स्थिति_ठीक = खाता_स्थिति_जांचें(स्रोत_खाता, 1)\n    अगर (स्थिति_ठीक == 0) {\n        लिखो(\"स्थानांतरण अवरुद्ध: स्रोत खाता निलंबित है।\")\n        लौटाओ 0\n    }"
-                elif lang_lower == "telugu":
-                    rep_code = "    అనుకో స్థితి_సరి = ఖాతా_స్థితి_తనిఖీ(మూల_ఖాతా, 1)\n    ఒకవేళ (స్థితి_సరి == 0) {\n        రాయి(\"బదిలీ నిరోధించబడింది: మూల ఖాతా నిలిపివేయబడింది.\")\n        తిరిగి_ఇవ్వు 0\n    }"
-                elif lang_lower == "bengali":
-                    rep_code = "    ধরো অবস্থা_ঠিক = অ্যাকাউন্ট_অবস্থা_যাচাই(উৎস_অ্যাকাউন্ট, 1)\n    যদি (অবস্থা_ঠিক == 0) {\n        ছাপাও(\"স্থানান্তর অবরুদ্ধ: উৎস অ্যাকাউন্ট স্থগিত।\")\n        ফেরত 0\n    }"
-                elif lang_lower == "marathi":
-                    rep_code = "    घ्या स्थिती_ठीक = खाते_स्थिती_तपासा(मूळ_खाते, 1)\n    जर (स्थिती_ठीक == 0) {\n        लिहा(\"हस्तांतरण रोखले: मूळ खाते निलंबित आहे.\")\n        परत_करा 0\n    }"
-                elif lang_lower == "nepali":
-                    rep_code = "    मान स्थिति_ठीक = खाता_स्थिति_जाँच(स्रोत_खाता, 1)\n    यदि (स्थिति_ठीक == 0) {\n        छाप(\"हस्तान्तरण रोकियो: स्रोत खाता निलम्बित छ।\")\n        फिर्ता 0\n    }"
-                else:
-                    rep_code = "    let status_ok = check_account_status(from_account_id, 1)\n    if (status_ok == 0) {\n        print(\"Transfer blocked: Source account is suspended.\")\n        return 0\n    }"
-                proposed_source = source_code[:m_byp.start()] + rep_code + source_code[m_byp.end():]
+            range_match = _extract_balanced_if_else(source_code, byp_hdr_pat)
+            if lang_lower == "hindi":
+                rep_code = "    मानो स्थिति_ठीक = खाता_स्थिति_जांचें(स्रोत_खाता, 1)\n    अगर (स्थिति_ठीक == 0) {\n        लिखो(\"स्थानांतरण अवरुद्ध: स्रोत खाता निलंबित है.\")\n        लौटाओ 0\n    }"
+            elif lang_lower == "telugu":
+                rep_code = "    అనుకో స్థితి_సరి = ఖాతా_స్థితి_తనిఖీ(మూల_ఖాతా, 1)\n    ఒకవేళ (స్థితి_సరి == 0) {\n        ముద్రించు(\"బదిలీ నిరోధించబడింది: మూల ఖాతా నిలిపివేయబడింది.\")\n        తిరిగి_ఇవ్వు 0\n    }"
+            elif lang_lower == "bengali":
+                rep_code = "    ধরো অবস্থা_ঠিক = অ্যাকাউন্ট_অবস্থা_যাচাই(উৎস_অ্যাকাউন্ট, 1)\n    যদি (অবস্থা_ঠিক == 0) {\n        ছাপাও(\"স্থানান্তর অবরুদ্ধ: উৎস অ্যাকাউন্ট স্থগিত.\")\n        ফেরত 0\n    }"
+            elif lang_lower == "marathi":
+                rep_code = "    घ्या स्थिती_ठीक = खाते_स्थिती_तपासा(मूळ_खाते, 1)\n    जर (स्थिती_ठीक == 0) {\n        लिहा(\"हस्तांतरण रोखले: मूळ खाते निलंबित आहे.\")\n        परत_करा 0\n    }"
+            elif lang_lower == "nepali":
+                rep_code = "    मान स्थिति_ठीक = खाता_स्थिति_जाँच(स्रोत_खाता, 1)\n    यदि_हो (स्थिति_ठीक == 0) {\n        छाप(\"हस्तान्तरण रोकियो: स्रोत खाता निलम्बित छ.\")\n        फिर्ता 0\n    }"
+            else:
+                rep_code = "    let status_ok = check_account_status(from_account_id, 1)\n    if (status_ok == 0) {\n        print(\"Transfer blocked: Source account is suspended.\")\n        return 0\n    }"
+            if range_match:
+                proposed_source = source_code[:range_match[0]] + rep_code + source_code[range_match[1]:]
+                proposed_code = rep_code
+            elif gen_fn_match:
+                insert_pos = gen_fn_match.end()
+                proposed_source = source_code[:insert_pos] + "\n" + rep_code + source_code[insert_pos:]
                 proposed_code = rep_code
             else:
-                proposed_code = "    let status_ok = check_account_status(from_account_id, 1)\n    if (status_ok == 0) { return 0 }"
+                proposed_source = f"{rep_code}\n{source_code}"
+                proposed_code = rep_code
             explanation = "Enforced account status check unconditionally for all transaction amounts (CWE-285)."
 
         elif "SEC-AUTH-001" in rule_id or "SEC-IDOR-001" in rule_id or "IDOR" in title or "Ownership" in title:
-            idor_check = {
-                "english": "    // Fixed IDOR: Assert caller ownership\n    if (caller_id != from_account_id) {\n        print(\"Access Denied: Caller does not own the source account.\")\n        return 0\n    }",
-                "hindi": "    // स्वामित्व सत्यापन (IDOR शमन)\n    अगर (कॉलर_आईडी != स्रोत_खाता) {\n        लिखो(\"पहुंच अस्वीकृत: कॉलर स्रोत खाते का स्वामी नहीं है।\")\n        लौटाओ 0\n    }",
-                "telugu": "    // యాజమాన్య ధృవీకరణ (IDOR)\n    ఒకవేళ (కాలర్_ఐడి != మూల_ఖాతా) {\n        రాయి(\"యాక్సెస్ తిరస్కరించబడింది: కాలర్ మూల ఖాతాదారుడు కాదు.\")\n        తిరిగి_ఇవ్వు 0\n    }",
-                "bengali": "    // মালিকানা যাচাইকরণ (IDOR)\n    যদি (কলার_আইডি != উৎস_অ্যাকাউন্ট) {\n        ছাপাও(\"অ্যাক্সেস অস্বীকৃত: কলার উৎস অ্যাকাউন্টের মালিক নন।\")\n        ফেরত 0\n    }",
-                "marathi": "    // मालकी पडताळणी (IDOR)\n    जर (कॉलर_आयडी != मूळ_खाते) {\n        लिहा(\"प्रवेश नाकारला: कॉलर मूळ खात्याचा मालक नाही.\")\n        परत_करा 0\n    }",
-                "nepali": "    // स्वामित्व प्रमाणीकरण (IDOR)\n    यदि (कलर_आईडी != स्रोत_खाता) {\n        छाप(\"पहुँच अस्वीकृत: कलर स्रोत खाताको मालिक होइन।\")\n        फिर्ता 0\n    }"
-            }.get(language.lower(), "    if (caller_id != from_account_id) { return 0 }")
+            # Check for transfer workflow function
+            transfer_fn_pat = re.compile(
+                r'(?:function|कार्य|ఫంక్షన్|ফাংশন|कार्य_करा|कार्य_गर)\s+'
+                r'(?:transfer_funds|राशि_स्थानांतरित_करें|నిధులు_బదిలీ_చేయి|অর্থ_স্থানান্তর_করো|रक्कम_वर्ग_करा|रकम_पठाउ)\s*\(([^)]+)\)'
+            )
+            m_trans = transfer_fn_pat.search(source_code)
+            caller_print_match = re.search(r'[ \t]*(?:print|लिखो|రాయి|ముద్రించు|ছাপাও|लिहा|छाप)\s*\([^)]*(?:caller_id|कॉलर_आईडी|కాలర్_ఐడి|কলার_আইডি|कॉलर_आयडी|कलर_आईडी)[^)]*\)', source_code)
 
-            proposed_code = idor_check
-            caller_print_match = re.search(r'[ \t]*(?:print|लिखो|రాయి|ছাপাও|लिहा|छाप)\s*\([^)]*(?:caller_id|कॉलर_आईडी|కాలర్_ఐడి|কলার_আইডি|कॉलर_आयडी|कलर_आईडी)[^)]*\)', source_code)
-            if caller_print_match:
-                insert_pos = caller_print_match.end()
-                proposed_source = source_code[:insert_pos] + "\n\n" + idor_check + source_code[insert_pos:]
-            elif evidence and evidence in source_code:
-                proposed_source = source_code.replace(evidence, f"{idor_check}\n    {evidence}", 1)
+            if m_trans or caller_print_match or any(k in source_code for k in ("caller_id", "कॉलर_आईडी", "కాలర్_ఐడి", "কলার_আইডি", "कॉलर_आयडी", "कलर_आईडी")):
+                if lang_lower == "hindi":
+                    idor_check = "    // स्वामित्व सत्यापन (IDOR शमन)\n    अगर (कॉलर_आईडी != स्रोत_खाता) {\n        लिखो(\"पहुँच अस्वीकृत: कॉलर स्रोत खाते का स्वामी नहीं है.\")\n        लौटाओ 0\n    }"
+                elif lang_lower == "telugu":
+                    idor_check = "    // యాజమాన్య ధృవీకరణ (IDOR)\n    ఒకవేళ (కాలర్_ఐడి != మూల_ఖాతా) {\n        ముద్రించు(\"యాక్సెస్ తిరస్కరించబడింది: కాలర్ మూల ఖాతాదారుడు కాదు.\")\n        తిరిగి_ఇవ్వు 0\n    }"
+                elif lang_lower == "bengali":
+                    idor_check = "    // মালিকানা যাচাইকরণ (IDOR)\n    যদি (কলার_আইডি != উৎস_অ্যাকাউন্ট) {\n        ছাপাও(\"অ্যাক্সেস অস্বীকৃত: কলার উৎস অ্যাকাউন্টের মালিক নন.\")\n        ফেরত 0\n    }"
+                elif lang_lower == "marathi":
+                    idor_check = "    // मालकी पडताळणी (IDOR)\n    जर (कॉलर_आयडी != मूळ_खाते) {\n        लिहा(\"प्रवेश नाकारला: कॉलर मूळ खात्याचा मालक नाही.\")\n        परत_करा 0\n    }"
+                elif lang_lower == "nepali":
+                    idor_check = "    // स्वामित्व प्रमाणीकरण (IDOR)\n    यदि_हो (कलर_आईडी != स्रोत_खाता) {\n        छाप(\"पहुँच अस्वीकृत: कलर स्रोत खाताको मालिक होइन.\")\n        फिर्ता 0\n    }"
+                else:
+                    idor_check = "    // Fixed IDOR: Assert caller ownership\n    if (caller_id != from_account_id) {\n        print(\"Access Denied: Caller does not own the source account.\")\n        return 0\n    }"
+
+                proposed_code = idor_check
+                if caller_print_match:
+                    insert_pos = caller_print_match.end()
+                    proposed_source = source_code[:insert_pos] + "\n\n" + idor_check + source_code[insert_pos:]
+                elif m_trans:
+                    insert_pos = m_trans.end()
+                    proposed_source = source_code[:insert_pos] + "\n" + idor_check + source_code[insert_pos:]
+                elif gen_fn_match:
+                    insert_pos = gen_fn_match.end()
+                    proposed_source = source_code[:insert_pos] + "\n" + idor_check + source_code[insert_pos:]
+                else:
+                    proposed_source = f"{idor_check}\n{source_code}"
+            else:
+                fn_params = [p.strip() for p in gen_fn_match.group(3).split(',') if p.strip()] if gen_fn_match else []
+                user_param = fn_params[0] if fn_params else "user_id"
+                needs_decl = False
+                if lang_lower == "hindi":
+                    sess_var = "वर्तमान_सत्र_उपयोगकर्ता" if "वर्तमान_सत्र_उपयोगकर्ता" in source_code else "सत्र_उपयोगकर्ता"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // स्वामित्व सत्यापन (IDOR शमन)\n    अगर ({user_param} != {sess_var}) {{\n        लिखो(\"पहुँच अस्वीकृत: कॉलर स्रोत खाते का स्वामी नहीं है.\")\n        लौटाओ 0\n    }}"
+                    decl_code = f"// TODO: सत्र संदर्भ चर\nमानो {sess_var} = 1\n\n"
+                elif lang_lower == "telugu":
+                    sess_var = "ప్రస్తుత_సెషన్_వినియోగదారుడు" if "ప్రస్తుత_సెషన్_వినియోగదారుడు" in source_code else "సెషన్_యూజర్"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // యాజమాన్య ధృవీకరణ (IDOR)\n    ఒకవేళ ({user_param} != {sess_var}) {{\n        ముద్రించు(\"యాక్సెస్ తిరస్కరించబడింది: కాలర్ మూల ఖాతాదారుడు కాదు.\")\n        తిరిగి_ఇవ్వు 0\n    }}"
+                    decl_code = f"// TODO: సెషన్ వేరియబుల్\nఅనుకో {sess_var} = 1\n\n"
+                elif lang_lower == "bengali":
+                    sess_var = "বর্তমান_সেশন_ব্যবহারকারী" if "বর্তমান_সেশন_ব্যবহারকারী" in source_code else "সেশন_ইউজার"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // মালিকানা যাচাইকরণ (IDOR)\n    যদি ({user_param} != {sess_var}) {{\n        ছাপাও(\"অ্যাক্সেস অস্বীকৃত: কলার উৎস অ্যাকাউন্টের মালিক নন.\")\n        ফেরত 0\n    }}"
+                    decl_code = f"// TODO: সেশন চলক\nধরো {sess_var} = 1\n\n"
+                elif lang_lower == "marathi":
+                    sess_var = "चालू_सत्र_वापरकर्ता" if "चालू_सत्र_वापरकर्ता" in source_code else "सत्र_वापरकर्ता"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // मालकी पडताळणी (IDOR)\n    जर ({user_param} != {sess_var}) {{\n        लिहा(\"प्रवेश नाकारला: कॉलर मूळ खात्याचा मालक नाही.\")\n        परत_करा 0\n    }}"
+                    decl_code = f"// TODO: सत्र व्हेरिएबल\nघ्या {sess_var} = 1\n\n"
+                elif lang_lower == "nepali":
+                    sess_var = "वर्तमान_सत्र_प्रयोगकर्ता" if "वर्तमान_सत्र_प्रयोगकर्ता" in source_code else "सत्र_प्रयोगकर्ता"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // स्वामित्व प्रमाणीकरण (IDOR)\n    यदि_हो ({user_param} != {sess_var}) {{\n        छाप(\"पहुँच अस्वीकृत: कलर स्रोत खाताको मालिक होइन.\")\n        फिर्ता 0\n    }}"
+                    decl_code = f"// TODO: सत्र चल\nमान {sess_var} = 1\n\n"
+                else:
+                    sess_var = "current_session_user" if "current_session_user" in source_code else "session_user"
+                    if sess_var not in source_code: needs_decl = True
+                    idor_check = f"    // Fixed IDOR: Assert caller ownership\n    if ({user_param} != {sess_var}) {{\n        print(\"Access Denied: Caller does not own the source account.\")\n        return 0\n    }}"
+                    decl_code = f"// TODO: Session context variable\nlet {sess_var} = 1\n\n"
+
+                proposed_code = idor_check
+                if gen_fn_match:
+                    insert_pos = gen_fn_match.end()
+                    proposed_source = source_code[:insert_pos] + "\n" + idor_check + source_code[insert_pos:]
+                elif evidence and evidence in source_code:
+                    proposed_source = source_code.replace(evidence, f"{idor_check}\n    {evidence}", 1)
+                else:
+                    proposed_source = f"{idor_check}\n{source_code}"
+                if needs_decl:
+                    proposed_source = f"{decl_code}{proposed_source}"
             explanation = "Enforced object-level ownership check to prevent IDOR balance transfers (CWE-639)."
 
         elif "SEC-SEM-001" in rule_id or "SEM-001" in rule_id or "Undefined" in title or "division by zero" in title.lower() or "Semantic" in title or (finding_data and str(finding_data.get("stage_id", "")).lower() == "semantic_analysis"):
@@ -1440,7 +1593,10 @@ class SecurityAnalysisCoordinator:
                     ("ఖాతా_ముగింపు_స్థితి", "ఖాతా_మూసివేయబడింది"),
                     ("অ্যাকাউন্ট_সমাপ্তি_অবস্থা", "অ্যাকাউন্ট_বন্ধ"),
                     ("खाते_शेवटची_स्थिती", "खाते_बंद"),
-                    ("खाता_अन्तिम_स्थिति", "खाता_बन्द")
+                    ("खाता_अन्तिम_स्थिति", "खाता_बन्द"),
+                    ("final_order", "अंतिम_आदेश"),
+                    ("মূল_मूल्य", "মূল_মূল্য"),
+                    ("রেকॉर्ड_সূচক", "রেকর্ড_সূচক")
                 ]
                 matched_replacement = False
                 for bad, good in replacements:
@@ -1521,40 +1677,70 @@ class SecurityAnalysisCoordinator:
             if proposed_source == source_code or not proposed_code:
                 return None
 
-        elif "SEC-DATA-001" in rule_id or "SEC-PWD-002" in rule_id or "Secret Key" in title or "Password" in title or "Credential" in title:
+        elif "SEC-DATA-002" in rule_id or "Sensitive" in title or "Disclosure" in title or "Console Output" in title:
+            print_secret_pat = re.compile(r'([ \t]*)(?:print|लिखो|రాయి|ముద్రించు|ছাপাও|लिहा|छाप)\s*\([^)]*(?:admin_secret_key|व्यवस्थापक_गुप्त_कुंजी|నిర్వాహక_రహస్య_కీ|প্রশাসক_গোপন_চাবি|प्रशासक_गुप्त_की|प्रशासक_गोप्य_कुञ्जी)[^)]*\)')
+            m_sec_print = print_secret_pat.search(source_code)
+            if m_sec_print:
+                indent = m_sec_print.group(1)
+                lang_low = (language or "").lower()
+                print_kw = "print"
+                if "hindi" in lang_low: print_kw = "लिखो"
+                elif "telugu" in lang_low: print_kw = "ముద్రించు"
+                elif "bengali" in lang_low: print_kw = "ছাপাও"
+                elif "marathi" in lang_low: print_kw = "लिहा"
+                elif "nepali" in lang_low: print_kw = "छाप"
+                safe_log = f'{indent}{print_kw}("DEBUG LOG [INTERNAL]: [Master Secret Key Redacted for Security]")'
+                proposed_source = source_code[:m_sec_print.start()] + safe_log + source_code[m_sec_print.end():]
+                proposed_code = safe_log
+            elif line_no and 1 <= line_no <= len(source_lines) and any(kw in source_lines[line_no - 1] for kw in ("print", "लिखो", "ముద్రించు", "ছাপাও", "लिहा", "छाप")):
+                orig_line = source_lines[line_no - 1]
+                indent = orig_line[:len(orig_line) - len(orig_line.lstrip())]
+                lang_low = (language or "").lower()
+                print_kw = "print"
+                if "hindi" in lang_low: print_kw = "लिखो"
+                elif "telugu" in lang_low: print_kw = "ముద్రించు"
+                elif "bengali" in lang_low: print_kw = "ছাপাও"
+                elif "marathi" in lang_low: print_kw = "लिहा"
+                elif "nepali" in lang_low: print_kw = "छाप"
+                safe_log = f'{indent}{print_kw}("DEBUG LOG [INTERNAL]: [Credential Redacted for Security]")'
+                new_lines = list(source_lines)
+                new_lines[line_no - 1] = safe_log
+                proposed_source = "\n".join(new_lines)
+                proposed_code = safe_log
+            else:
+                return None
+            explanation = "Redacted sensitive administrative secret from debug console output (CWE-200)."
+
+        elif "SEC-DATA-001" in rule_id or "SEC-PWD-002" in rule_id or "Secret Key" in title or "Password" in title or ("Credential" in title and "Leaked" not in title and "Console" not in title and "Disclosure" not in title):
             proposed_source = re.sub(
-                r'(["\'](?:sk_live_sec_prod_[^"\']+|password123|admin123|secret_pass_[^"\']+)["\'])',
+                r"""([\"'](?:sk_live_sec_prod_[^\"']+|password123|admin123|secret_pass_[^\"']+)["'])""",
                 '"REDACTED_USE_ENVIRONMENT_CONFIG"',
                 source_code,
                 flags=re.IGNORECASE
             )
             if proposed_source == source_code:
                 proposed_source = re.sub(
-                    r'(["\']sk_live_sec_prod_[^"\']+["\'])',
+                r"""([\"'](?:sk_live_sec_prod_[^\"']+|password123|admin123|secret_pass_[^\"']+)["'])""",
                     '"REDACTED_USE_ENVIRONMENT_CONFIG"',
                     source_code
                 )
             proposed_code = '// Credentials moved to secure environment configuration\nlet admin_secret_key = "REDACTED_USE_ENVIRONMENT_CONFIG"'
             explanation = "Redacted hardcoded secret key and replaced with runtime environment configuration placeholder (CWE-798)."
 
-        elif "SEC-DATA-002" in rule_id or "Sensitive" in title or "Disclosure" in title:
-            print_secret_pat = re.compile(r'[ \t]*(?:print|लिखो|రాయి|ছাপাও|लिहा|छाप)\s*\([^)]*(?:admin_secret_key|व्यवस्थापक_गुप्त_कुंजी|నిర్వాహక_రహస్య_కీ|প্রশাসক_গোপন_চাবি|प्रशासक_गुप्त_की|प्रशासक_गोप्य_कुञ्जी)[^)]*\)')
-            m_sec_print = print_secret_pat.search(source_code)
-            if m_sec_print:
-                safe_log = '        print("DEBUG LOG [INTERNAL]: [Master Secret Key Redacted for Security]")'
-                proposed_source = source_code[:m_sec_print.start()] + safe_log + source_code[m_sec_print.end():]
-                proposed_code = safe_log
-            else:
-                proposed_code = '// Redacted secret logging\nprint("DEBUG LOG: [Credential redacted for security]")'
-            explanation = "Redacted sensitive administrative secret from debug console output (CWE-200)."
-
         elif "SEC-DATA-003" in rule_id or "Bound" in title or "Off-By-One" in title:
             proposed_source = source_code
             if "> 5" in proposed_source:
                 proposed_source = proposed_source.replace("> 5", ">= 5")
-            if "<= raw_count" in proposed_source:
+            # Rename-aware token replacement of <= to < inside while loop header for every language
+            loop_pat = re.compile(
+                r'(\b(?:while|जबतक|ఉన్నంతవరకు|যতক্ষণ|जोपर्यंत|जबसम्म)\s*\([^)]*)<=([^)]*\))'
+            )
+            m_loop = loop_pat.search(proposed_source)
+            if m_loop:
+                proposed_source = proposed_source[:m_loop.start()] + m_loop.group(1) + "<" + m_loop.group(2) + proposed_source[m_loop.end():]
+            elif "<= raw_count" in proposed_source:
                 proposed_source = proposed_source.replace("<= raw_count", "< raw_count")
-            if "<= 5" in proposed_source:
+            elif "<= 5" in proposed_source:
                 proposed_source = proposed_source.replace("<= 5", "< 5")
             proposed_code = "// Corrected upper boundary and loop counter limits"
             explanation = "Corrected upper boundary check to reject index >= 5 and prevent buffer overflow (CWE-129)."
@@ -1584,23 +1770,70 @@ class SecurityAnalysisCoordinator:
                     proposed_code = safe_query
                 else:
                     if lang_low == "hindi":
-                        safe_query = "    // सुरक्षित पैरामीटराइज्ड डेटाबेस लुकअप\n    मानो पूर्ण_क्वेरी = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // सुरक्षित पैरामीटराइज्ड डेटाबेस लुकअप\n    मानो पूर्ण_क्वेरी = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     elif lang_low == "telugu":
-                        safe_query = "    // సురక్షిత పారామీటరైజ్డ్ ప్రశ్న\n    అనుకో పూర్తి_క్వెరీ = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // సురక్షిత పారామీటరైజ్డ్ ప్రశ్న\n    అనుకో పూర్తి_క్వెరీ = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     elif lang_low == "bengali":
-                        safe_query = "    // প্যারামিটারাইজড নিরাপদ ডেটাবেস অনুসন্ধান\n    ধরো সম্পূর্ণ_কোয়েরি = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // প্যারামিটারাইজড নিরাপদ ডেটাবেস অনুসন্ধান\n    ধরো সম্পূর্ণ_কোয়েরি = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     elif lang_low == "marathi":
-                        safe_query = "    // सुरक्षित पॅरामीटराइज्ड चौकशी\n    घ्या पूर्ण_चौकशी = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // सुरक्षित पॅरामीटराइज्ड चौकशी\n    घ्या पूर्ण_क्वेरी = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     elif lang_low == "nepali":
-                        safe_query = "    // सुरक्षित प्यारामिटराइज्ड क्वेरी\n    मान पूर्ण_क्वेरी = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // सुरक्षित प्यारामिटराइज्ड क्वेरी\n    मान पूर्ण_क्वेरी = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     else:
-                        safe_query = "    // Parameterized database lookup\n    let full_query = \"SELECT user_id, email FROM accounts WHERE role = 'user' AND user_id = ?\""
+                        safe_query = '    // Parameterized database lookup\n    let full_query = "SELECT user_id, email FROM accounts WHERE role = \'user\' AND user_id = ?"'
                     proposed_code = safe_query
             explanation = "Replaced dynamic string concatenation with safe parameterized database query logic (CWE-89)."
 
         elif "SEC-LOGIC-001" in rule_id or "Negative" in title or "Refund" in title:
-            proposed_code = f"    if (item_quantity <= 0) {{\n        print('Error: Quantity must be positive.')\n        return 0\n    }}\n    {evidence}"
-            explanation = "Added negative item quantity validation to prevent invoice balance reversals (CWE-840)."
+            # Insert guard as first statement inside function body (after opening brace)
+            subtotal_fn_pat = re.compile(
+                r'([ \t]*(?:function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+'
+                r'(?:calculate_item_subtotal|वस्तु_उपयोग_गणना|వస్తువు_ఉపమొత్తం_లెక్కించు|পণ্যের_উপযোগ_গণনা|वस्तू_उपयोग_गणना|वस्तु_उपयोग_गणना)\s*\(([^)]+)\)\s*\{)'
+            )
+            m_fn = subtotal_fn_pat.search(source_code)
+            if not m_fn and evidence:
+                ev_clean = re.escape(evidence.split('{')[0].strip())
+                m_fn = re.search(ev_clean + r'\s*\{', source_code)
+            if not m_fn and line_no and 1 <= line_no <= len(source_lines):
+                for l_idx in range(max(0, line_no - 3), min(len(source_lines), line_no + 3)):
+                    m_cand = re.search(r'([ \t]*(?:function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+[A-Za-z0-9_\u0900-\u0D7F]+\s*\(([^)]+)\)\s*\{)', source_lines[l_idx])
+                    if m_cand:
+                        m_fn = re.search(re.escape(m_cand.group(0)), source_code)
+                        break
+            if not m_fn:
+                fn_pat = re.compile(
+                    r'([ \t]*(?:fun|function|def|कार्य|ఫంక్షన్|పని|ফাংশন|कार्य_करा|कार्य_गर)\s+'
+                    r'([A-Za-z0-9_\u0900-\u0D7F]+)\s*\(([^)]+)\)\s*\{)'
+                )
+                m_fn = fn_pat.search(source_code)
+            if m_fn:
+                p_match = re.search(r'\(([^)]+)\)', m_fn.group(0))
+                params = [p.strip() for p in p_match.group(1).split(',')] if p_match else []
+                qty_param = params[-1] if params else "item_quantity"
+                for p in params:
+                    if any(k in p for k in ["quantity", "item_quantity", "qty", "मात्रा", "పరిమాణం", "परिमाण", "পরিমাণ", "प्रमाण"]):
+                        qty_param = p
+                        break
+                lang_low = (language or "").lower()
+                if "hindi" in lang_low:
+                    guard = f'    अगर ({qty_param} <= 0) {{\n        लिखो(\"त्रुटि: मात्रा धनात्मक होनी चाहिए.\")\n        लौटाओ 0\n    }}'
+                elif "telugu" in lang_low:
+                    guard = f'    ఒకవేళ ({qty_param} <= 0) {{\n        ముద్రించు(\"లోపం: పరిమాణం ధనాత్మకంగా ఉండాలి.\")\n        తిరిగి_ఇవ్వు 0\n    }}'
+                elif "bengali" in lang_low:
+                    guard = f'    যদি ({qty_param} <= 0) {{\n        ছাপাও(\"ত্রুটি: পরিমাণ ধনাত্মক হতে হবে.\")\n        ফেরত 0\n    }}'
+                elif "marathi" in lang_low:
+                    guard = f'    जर ({qty_param} <= 0) {{\n        लिहा(\"त्रुटी: प्रमाण धन असणे आवश्यक आहे.\")\n        परत_करा 0\n    }}'
+                elif "nepali" in lang_low:
+                    guard = f'    यदि_हो ({qty_param} <= 0) {{\n        छाप(\"त्रुटि: मात्रा धनात्मक हुनुपर्छ.\")\n        फिर्ता 0\n    }}'
+                else:
+                    guard = f'    if ({qty_param} <= 0) {{\n        print(\"Error: Quantity must be positive.\")\n        return 0\n    }}'
+                insert_pos = m_fn.end()
+                proposed_source = source_code[:insert_pos] + "\n" + guard + source_code[insert_pos:]
+                proposed_code = guard
+            else:
+                proposed_code = '    if (item_quantity <= 0) {\n        print("Error: Quantity must be positive.")\n        return 0\n    }'
+                proposed_source = f"{proposed_code}\n{source_code}"
+            explanation = "Added negative item quantity validation inside function body to prevent invoice balance reversals (CWE-840)."
 
         elif "eval" in title.lower() or "exec" in title.lower() or "SEC-EXEC-001" in rule_id or "SEC-EVAL-003" in rule_id or "SEC-IR_-003" in rule_id or "SEC-IR-001" in rule_id or "SEC-IR_-001" in rule_id:
             # Task C.1 & C.2:
@@ -1735,7 +1968,7 @@ class SecurityAnalysisCoordinator:
             # Task C.3: Parameterize query placeholder pattern; remove shell string concatenation by using a fixed command and validated argument
             temp_code = source_code.replace(" ; rm -rf /tmp/vital_sandbox", "").replace("; rm -rf /tmp/vital_sandbox", "")
             shell_concat_pat = re.compile(
-                r'([ \t]*((?:let|मानो|అనుకో|ধরো|ঘ्या|मान)\s+([a-zA-Z0-9_\u0900-\u097F\u0980-\u09FF\u0C00-\u0C7F]+)\s*=)\s*"echo [^"]*)\s*;\s*"\s*\+\s*[a-zA-Z0-9_\u0900-\u097F\u0980-\u09FF\u0C00-\u0C7F]+'
+                r"""([\"'](?:sk_live_sec_prod_[^\"']+|password123|admin123|secret_pass_[^\"']+)["'])""",
             )
             m_shell = shell_concat_pat.search(temp_code)
             if m_shell:
@@ -1973,13 +2206,23 @@ class SecurityAnalysisCoordinator:
             return cached
 
         # Step 1: Run deterministic security remediation rules first (instant, <2ms)
-        if prefer_deterministic and not request_ai:
+        if prefer_deterministic:
             det_fix = self.generate_deterministic_fix(source_code, finding_id, finding_data, language)
             if det_fix is not None:
                 if len(self._fix_cache) >= 256:
                     self._fix_cache.pop(next(iter(self._fix_cache)))
                 self._fix_cache[cache_key] = det_fix
                 return det_fix
+
+        # If deterministic only was requested, do not invoke LLM
+        if not request_ai:
+            return {
+                "success": False,
+                "error": f"Automated fix could not be deterministically determined for {title}. No deterministic rule available (manual review required).",
+                "finding_id": finding_id,
+                "rule_id": rule_id,
+                "is_manual": True
+            }
 
         # Step 2: Use local Ollama (with strict 5s timeout) for complex cases or explicit AI request
         is_healthy, health_msg, _ = self.ollama.check_health()

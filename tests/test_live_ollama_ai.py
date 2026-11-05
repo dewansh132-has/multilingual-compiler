@@ -12,6 +12,7 @@ from web.ai_remediation_engine import AIRemediationEngine, StageValidator
 
 class TestLiveOllamaAI(unittest.TestCase):
 
+    @unittest.skipIf(os.environ.get("VITAL_AI_DISABLED") == "1", "Live Ollama test skipped when VITAL_AI_DISABLED=1")
     def test_live_ollama_health_and_remediation(self):
         """Verify local Ollama qwen2.5-coder:7b-instruct model health and remediation."""
         is_healthy, msg, details = ollama_client.check_health(force_refresh=True)
@@ -51,4 +52,3 @@ class TestLiveOllamaAI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

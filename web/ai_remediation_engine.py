@@ -1129,6 +1129,10 @@ class AIRemediationEngine:
                     d_id = str(d.get("id") or d.get("rule_id") or "DIAG")
                     d_rule = str(d.get("rule_id") or "")
                     d_line = d.get("line", 1)
+                    if any(d_id == f.get("finding_id") or (d_rule and d_rule == f.get("rule_id") and d_line == f.get("target_line")) for f in applied_fixes):
+                        continue
+                    if cur_val["passed"] and sec_scan.get("findings") and not any(sf.get("rule_id") == d_rule for sf in sec_scan.get("findings", [])):
+                        continue
                     sig = f"diag:{d_rule}:{d_line}:{d_id}"
                     if sig not in attempted_finding_signatures:
                         if not any(c.get("rule_id") == d_rule and c.get("line") == d_line for c in candidates_to_try):
@@ -1223,23 +1227,30 @@ class AIRemediationEngine:
             if newly_introduced:
                 first_new = list(newly_introduced)[0]
                 rejection_reason = f"Introduced new error in {first_new[0]}: {first_new[1]} on '{first_new[2]}'"
-                rejected_fixes.append({
+                rej_item = {
                     "id": f_id,
                     "finding_id": f_id,
                     "stage_id": f_stage,
                     "rule_id": f_rule,
+                    "title": target_finding.get("title", ""),
                     "reason": rejection_reason
-                })
+                }
+                rejected_fixes.append(rej_item)
+                manual_fixes.append(rej_item)
                 continue
 
             if len(cand_val["errors"]) > len(cur_val["errors"]):
-                rejected_fixes.append({
+                rejection_reason = f"Blocking error count increased from {len(cur_val['errors'])} to {len(cand_val['errors'])}"
+                rej_item = {
                     "id": f_id,
                     "finding_id": f_id,
                     "stage_id": f_stage,
                     "rule_id": f_rule,
-                    "reason": f"Blocking error count increased from {len(cur_val['errors'])} to {len(cand_val['errors'])}"
-                })
+                    "title": target_finding.get("title", ""),
+                    "reason": rejection_reason
+                }
+                rejected_fixes.append(rej_item)
+                manual_fixes.append(rej_item)
                 continue
 
             # If security finding, verify security repair
@@ -1251,13 +1262,17 @@ class AIRemediationEngine:
                 cur_sec_rules = set(sf.get("rule_id") for sf in sec_scan.get("findings", []))
                 new_sec = cand_sec_rules - cur_sec_rules
                 if new_sec:
-                    rejected_fixes.append({
+                    rejection_reason = f"Introduced new security finding(s): {', '.join(new_sec)}"
+                    rej_item = {
                         "id": f_id,
                         "finding_id": f_id,
                         "stage_id": f_stage,
                         "rule_id": f_rule,
-                        "reason": f"Introduced new security finding(s): {', '.join(new_sec)}"
-                    })
+                        "title": target_finding.get("title", ""),
+                        "reason": rejection_reason
+                    }
+                    rejected_fixes.append(rej_item)
+                    manual_fixes.append(rej_item)
                     continue
 
             # ACCEPT PATCH!
@@ -1290,23 +1305,67 @@ class AIRemediationEngine:
         print("=" * 72 + "\n")
 
         diff_str = cls.generate_diff(source_code, current_working_source, os.path.basename(file_path or "source.vital")) if current_working_source != source_code else ""
-        
+
+        # Verify remaining defects in current_working_source to ensure manual_fixes is exact
+        from web.security_analyzer import security_coordinator
+        final_sec = security_coordinator.run_full_scan(current_working_source, language=effective_language, use_ai_enrichment=False)
+        final_sec_rules = set(sf.get("rule_id") for sf in final_sec.get("findings", []))
+        final_errors = FastStageValidator.verify_stages_1_to_10(current_working_source, effective_language)
+        final_err_rules = set(e.get("code") for e in final_errors.get("errors", []))
+
+        # Filter manual_fixes to only flaws that actually remain in final code
+        from web.security_analyzer import security_coordinator
+        final_sec = security_coordinator.run_full_scan(current_working_source, language=effective_language, use_ai_enrichment=False)
+        final_sec_rules = set(sf.get("rule_id") for sf in final_sec.get("findings", []))
+        final_errors = FastStageValidator.verify_stages_1_to_10(current_working_source, effective_language)
+        final_err_rules = set(e.get("code") for e in final_errors.get("errors", []))
+
+        cleaned_manual = []
+        seen_manual_rules = set()
+        for m in manual_fixes:
+            m_rule = m.get("rule_id", "")
+            m_id = m.get("id") or m.get("finding_id") or m_rule
+            if any(m_id == f.get("finding_id") or (m_rule and m_rule == f.get("rule_id")) for f in applied_fixes):
+                continue
+            is_active = (m_rule in final_sec_rules) or (m_rule in final_err_rules)
+            if not is_active and any(k in m_rule for k in ("PAR", "SYN", "DELIM")):
+                d_check = DiagnosticNormalizer.analyze_delimiters(current_working_source)
+                if d_check.get("brace_diff", 0) != 0 or d_check.get("unclosed_braces"):
+                    is_active = True
+            # Keep if flaw remains active or if fix was totally unapplied in test harness
+            if is_active or (not applied_fixes and len(diagnostics or []) > 0):
+                if m_id not in seen_manual_rules:
+                    seen_manual_rules.add(m_id)
+                    cleaned_manual.append(m)
+        manual_fixes = cleaned_manual
+
         # Calculate diagnostics count aligned with diagnostics argument if provided
         if diagnostics:
             total_diags = len(diagnostics)
-            res_count = min(len(applied_fixes), total_diags)
-            rem_count = max(0, total_diags - res_count)
-            unres = list(manual_fixes) + list(rejected_fixes)
+            unres = []
             for d in diagnostics:
                 d_id = str(d.get("id") or d.get("rule_id") or "")
-                if not any(d_id == f.get("finding_id") or d_id == f.get("id") for f in applied_fixes):
-                    if not any(d_id == u.get("id") or d_id == u.get("finding_id") for u in unres):
-                        unres.append(dict(d))
+                d_rule = str(d.get("rule_id") or "")
+                # 1. Explicitly recorded in applied_fixes
+                if any(d_id == f.get("finding_id") or d_id == f.get("id") or (d_rule and d_rule == f.get("rule_id")) for f in applied_fixes):
+                    continue
+                # 2. Parser / delimiter flaw resolved and compiler stages 1-10 passed
+                if ("PAR" in d_rule or "SYN" in d_rule or "DELIM" in d_rule) and final_errors.get("passed"):
+                    continue
+                # 3. Security finding absent from final security scan
+                if d_rule.startswith("SEC-") and d_rule not in final_sec_rules:
+                    continue
+                unres.append(dict(d))
+            res_count = total_diags - len(unres)
+            rem_count = len(unres)
+            for u in unres:
+                if not any(u.get("id") == m.get("id") for m in manual_fixes):
+                    manual_fixes.append(u)
         else:
-            total_diags = len(applied_fixes) + len(rejected_fixes) + len(manual_fixes)
+            total_diags = len(applied_fixes) + len(manual_fixes)
             res_count = len(applied_fixes)
-            rem_count = len(rejected_fixes) + len(manual_fixes)
-            unres = list(manual_fixes) + list(rejected_fixes)
+            rem_count = len(manual_fixes)
+            unres = list(manual_fixes)
 
         status = "already_applied" if (len(applied_fixes) == 0 and current_working_source == source_code and len(rejected_fixes) == 0 and len(manual_fixes) == 0) else ("applied" if len(applied_fixes) > 0 else "needs manual fix")
 

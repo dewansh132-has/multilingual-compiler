@@ -1,2 +1,6 @@
-a = 10
-print(a)
+# English: Hello World & Variables
+greeting = "Hello, Multilingual VITAL!"
+print(greeting)
+x = 42
+print("The value :")
+print(x)
