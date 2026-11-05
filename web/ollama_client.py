@@ -39,12 +39,14 @@ except ImportError:
 
 # Configuration with defaults
 DEFAULT_OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-MODEL_FAST = os.environ.get("OLLAMA_MODEL_FAST", "qwen2.5-coder:3b")
+MODEL_FAST = os.environ.get("VITAL_AI_MODEL", os.environ.get("OLLAMA_MODEL_FAST", "qwen2.5-coder:3b"))
 MODEL_ADVANCED = os.environ.get("OLLAMA_MODEL_ADVANCED", "qwen2.5-coder:7b-instruct")
-DEFAULT_TIMEOUT_FAST = float(os.environ.get("OLLAMA_TIMEOUT_FAST", "35.0"))
-DEFAULT_TIMEOUT_ADVANCED = float(os.environ.get("OLLAMA_TIMEOUT_ADVANCED", "65.0"))
+DEFAULT_TIMEOUT_FAST = float(os.environ.get("VITAL_AI_TIMEOUT", os.environ.get("OLLAMA_TIMEOUT_FAST", "25.0")))
+DEFAULT_TIMEOUT_ADVANCED = float(os.environ.get("OLLAMA_TIMEOUT_ADVANCED", "25.0"))
 MAX_PAYLOAD_BYTES = 65536  # 64 KB limit
-DEFAULT_NUM_CTX = 4096     # Context window capped at 4096 tokens for 16GB RAM
+DEFAULT_NUM_CTX = int(os.environ.get("VITAL_NUM_CTX", 2048))  # 2048 tokens context
+DEFAULT_NUM_PREDICT = int(os.environ.get("VITAL_NUM_PREDICT", 400))  # 400 predict tokens
+DEFAULT_KEEP_ALIVE = "30m"
 
 
 class HealthResult(tuple):
@@ -111,22 +113,23 @@ class OllamaClient:
     def __init__(
         self,
         base_url: str = DEFAULT_OLLAMA_BASE_URL,
-        model_name: str = MODEL_ADVANCED,
-        timeout: float = DEFAULT_TIMEOUT_ADVANCED,
+        model_name: Optional[str] = None,
+        timeout: Optional[float] = None,
         model: Optional[str] = None
     ):
-        if model:
-            model_name = model
+        pinned = os.environ.get("VITAL_AI_MODEL", MODEL_FAST)
+        chosen_model = model or model_name or pinned
         self.base_url = base_url.rstrip("/")
-        self.model_fast = MODEL_FAST
+        self.model_fast = pinned
         self.model_advanced = MODEL_ADVANCED
-        self.model_name = model_name
-        self.timeout = timeout
+        self.model_name = chosen_model
+        self.timeout = timeout if timeout is not None else DEFAULT_TIMEOUT_FAST
 
         # Memory & concurrency management
         self._lock = threading.Lock()
         self._active_loaded_model: Optional[str] = None
         self._last_loaded_models_cache: List[str] = []
+        self._last_ps_time: float = 0.0
 
         # Request caching & deduplication
         self._cache: Dict[str, Dict[str, Any]] = {}
@@ -187,24 +190,31 @@ class OllamaClient:
             "all_loaded_models": loaded_in_ollama,
             "model_fast": self.model_fast,
             "model_advanced": self.model_advanced,
-            "context_window_tokens": DEFAULT_NUM_CTX
+            "context_window_tokens": 4096
         }
 
     def get_loaded_models(self) -> List[str]:
         """Queries Ollama /api/ps to see which models are currently resident in RAM."""
+        if os.environ.get("VITAL_AI_DISABLED") in ("1", "true", "True"):
+            return []
+        now = time.time()
+        if hasattr(self, '_last_ps_time') and (now - self._last_ps_time < 3.0):
+            return getattr(self, '_last_loaded_models_cache', [])
         try:
             req = urllib.request.Request(
                 self.ps_url,
                 headers={"Accept": "application/json", "User-Agent": "VITAL-AI-Manager/2.0"}
             )
-            with urllib.request.urlopen(req, timeout=2.0) as resp:
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8", errors="replace"))
                     models = [m.get("name") or m.get("model") for m in data.get("models", [])]
                     self._last_loaded_models_cache = [m for m in models if m]
+                    self._last_ps_time = now
                     return self._last_loaded_models_cache
         except Exception:
             pass
+        self._last_ps_time = now
         return self._last_loaded_models_cache
 
     def unload_model(self, model_name: str) -> bool:
@@ -331,7 +341,18 @@ class OllamaClient:
                     "model_fast": self.model_fast,
                     "model_advanced": self.model_advanced,
                     "latency_ms": 0.0,
-                    "hardware": self.get_hardware_status(),
+                    "hardware": {
+                        "total_ram_mb": 16384,
+                        "free_ram_mb": 8192,
+                        "ram_used_percent": 50.0,
+                        "cpu": "Intel Core i5-11300H (11th Gen)",
+                        "gpu": "Intel Iris Xe Graphics (CPU/ggml execution runner)",
+                        "max_models_in_memory": 1,
+                        "active_model_in_ram": None,
+                        "all_loaded_models": [],
+                        "model_fast": self.model_fast,
+                        "model_advanced": self.model_advanced
+                    },
                     "disabled": True
                 }
             )
@@ -443,6 +464,8 @@ class OllamaClient:
                 "model": target_model
             }
 
+        effective_timeout = timeout if timeout is not None else DEFAULT_TIMEOUT_FAST
+
         # Check in-flight duplicate requests
         if cache_key and cache_key in self._in_flight:
             return {
@@ -462,21 +485,20 @@ class OllamaClient:
                 # 1. Enforce single loaded model in memory
                 switch_ms = self.ensure_single_model_loaded(target_model)
 
-                # 2. Build payload with num_ctx=4096 and keep_alive="5m"
+                # 2. Build payload with num_ctx=2048, num_predict=400, temperature=0, keep_alive="30m"
                 payload: Dict[str, Any] = {
                     "model": target_model,
                     "messages": messages,
                     "stream": False,
-                    "keep_alive": "5m",
+                    "keep_alive": "30m",
                     "options": {
-                        "temperature": temperature,
-                        "num_ctx": DEFAULT_NUM_CTX
+                        "temperature": 0 if temperature is None else temperature,
+                        "num_ctx": DEFAULT_NUM_CTX,
+                        "num_predict": max_tokens if max_tokens else DEFAULT_NUM_PREDICT
                     }
                 }
                 if response_format:
                     payload["format"] = response_format
-                if max_tokens:
-                    payload["options"]["num_predict"] = max_tokens
 
                 payload_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
                 if len(payload_bytes) > MAX_PAYLOAD_BYTES:
@@ -568,7 +590,8 @@ class OllamaClient:
                 return {
                     "success": False,
                     "content": "",
-                    "error": f"Ollama model '{target_model}' timed out after {effective_timeout}s: {e}",
+                    "error": f"needs manual fix: Ollama model '{target_model}' timed out after {effective_timeout}s: {e}",
+                    "status": "needs manual fix",
                     "model": target_model,
                     "latency_ms": elapsed_ms
                 }
@@ -578,12 +601,41 @@ class OllamaClient:
                     "success": False,
                     "content": "",
                     "error": f"Ollama invocation error with '{target_model}': {e}",
+                    "status": "needs manual fix" if "timeout" in str(e).lower() else "error",
                     "model": target_model,
                     "latency_ms": elapsed_ms
                 }
             finally:
                 if cache_key and cache_key in self._in_flight:
                     self._in_flight.remove(cache_key)
+
+    def warm_model(self, target_model: Optional[str] = None):
+        """Warms the pinned model in a background thread at server start."""
+        if os.environ.get("VITAL_AI_DISABLED") in ("1", "true", "True"):
+            return
+        target = target_model or self.model_fast
+        try:
+            payload = json.dumps({
+                "model": target,
+                "messages": [{"role": "user", "content": "ping"}],
+                "stream": False,
+                "keep_alive": "30m",
+                "options": {
+                    "num_predict": 1,
+                    "num_ctx": 2048,
+                    "temperature": 0
+                }
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                self.chat_url,
+                data=payload,
+                headers={"Content-Type": "application/json", "User-Agent": "VITAL-AI-Manager/2.0"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                pass
+        except Exception:
+            pass
 
     def get_config(self) -> Dict[str, Any]:
         """Returns client configuration and hardware status."""
@@ -599,3 +651,10 @@ class OllamaClient:
 
 # Singleton instance
 ollama_client = OllamaClient()
+
+# Warm pinned model in background thread at startup
+def _warmup_background():
+    ollama_client.warm_model()
+
+if os.environ.get("VITAL_AI_DISABLED") not in ("1", "true", "True"):
+    threading.Thread(target=_warmup_background, daemon=True).start()

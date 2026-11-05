@@ -246,6 +246,8 @@ def ai_fix_all():
     file_path = data.get('file_path', '')
     preferred_model = data.get('preferred_model')
 
+    deep_fix = bool(data.get('deep_fix', False))
+
     from web.ai_remediation_engine import remediation_engine
     result = remediation_engine.generate_fix_all(
         source_code=code,
@@ -254,7 +256,8 @@ def ai_fix_all():
         language=language,
         source_revision=source_revision,
         file_path=file_path,
-        preferred_model=preferred_model
+        preferred_model=preferred_model,
+        deep_fix=deep_fix
     )
     return jsonify(result)
 
@@ -285,6 +288,11 @@ def ai_apply_fix():
         language=language,
         finding_id=finding_id
     )
+    # 200 for success or already_applied; 409 for stale revision
+    if res.get("status") == "already_applied":
+        return jsonify(res), 200
+    if res.get("status") == "stale_revision":
+        return jsonify(res), 409
     return jsonify(res), (200 if res.get("success") else 400)
 
 

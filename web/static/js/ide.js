@@ -89,6 +89,7 @@
     btnRun: document.getElementById("btn-run"),
     runBtnIcon: document.getElementById("run-btn-icon"),
     runBtnText: document.getElementById("run-btn-text"),
+    toggleStage12Ai: document.getElementById("toggle-stage12-ai"),
     btnNew: document.getElementById("btn-new"),
     btnOpen: document.getElementById("btn-open"),
     fileInput: document.getElementById("file-input"),
@@ -395,6 +396,15 @@
      2. EVENT BINDINGS
      ======================================================================== */
   function bindEvents() {
+    // Stage 12 AI Toggle (Task A.2: default OFF, persist in localStorage)
+    if (elements.toggleStage12Ai) {
+      const savedToggle = localStorage.getItem("vital_stage12_ai_enabled");
+      elements.toggleStage12Ai.checked = savedToggle === "true";
+      elements.toggleStage12Ai.addEventListener("change", () => {
+        localStorage.setItem("vital_stage12_ai_enabled", elements.toggleStage12Ai.checked ? "true" : "false");
+      });
+    }
+
     // Run Button
     elements.btnRun.addEventListener("click", runCompiler);
 
@@ -2480,14 +2490,15 @@
 
     if (btn) btn.disabled = true;
     if (progress) progress.style.display = "flex";
-    if (statusText) statusText.textContent = `Ollama AI analyzing all ${unresolved.length} unresolved diagnostic(s) in this stage...`;
+    const firstDiagLine = unresolved[0] && (unresolved[0].line || unresolved[0].target_line) ? ` L${unresolved[0].line || unresolved[0].target_line}` : "";
+    if (statusText) statusText.textContent = `Fixing 1/${unresolved.length}: ${stageId}${firstDiagLine}...`;
 
     const currentCode = state.editor ? state.editor.getValue() : "";
     const lang = state.currentFile ? state.currentFile.language : "English";
     const filePath = state.currentFile ? state.currentFile.path : "";
 
     try {
-      setStatus(`Ollama AI synthesizing batch fix for ${unresolved.length} ${stageId} issues...`, "running");
+      setStatus(`Fixing 1/${unresolved.length}: ${stageId}${firstDiagLine}...`, "running");
       const resp = await fetch("/api/ai/fix-all", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2558,7 +2569,11 @@
       explanationText += `\n\n[Performance]: Inference: ${data.timing.inference_time_ms || 0}ms | Validation: ${data.timing.compiler_validation_time_ms || 0}ms | Total: ${data.timing.total_duration_ms || 0}ms`;
     }
     if (data.fixes && data.fixes.length > 0) {
-      const fixSummaries = data.fixes.map((f, i) => `${i + 1}. [${f.rule_id || f.finding_id || 'Issue'}] ${f.explanation || f.title || 'Corrected'}`).join("\n");
+      const fixSummaries = data.fixes.map((f, i) => {
+        const typeBadge = (f.fix_type === "rule-based" || f.is_deterministic) ? "[Rule-based]" : "[AI]";
+        const lineStr = f.target_line || (f.finding_data && f.finding_data.line) ? ` L${f.target_line || f.finding_data.line}` : "";
+        return `${i + 1}. ${typeBadge} [${f.rule_id || f.finding_id || 'Issue'}${lineStr}] ${f.explanation || f.title || 'Corrected'}`;
+      }).join("\n");
       explanationText += `\n\nResolved Issues:\n${fixSummaries}`;
     }
     if (data.unresolved && data.unresolved.length > 0) {
@@ -2788,15 +2803,16 @@
 
     // Validate proposal freshness and identity
     if (proposedCode === currentCode) {
-      setStatus("Status: No modifications found in proposed fix.", "warning");
-      alert("The proposed fix does not contain any modifications to the current buffer.");
+      setStatus("Status: Already applied.", "ready");
+      runCompiler(null, true);
       return;
     }
     if (fixData.source_revision && fixData.source_revision !== state.sourceRevisionId) {
-      alert("The source code has changed since this fix was generated. Please request a new fix for the updated code.");
+      setStatus("Source changed since this fix was suggested, regenerating...", "running");
       delete state.findingFixes[findingId];
       const container = document.getElementById(`inline-remediation-${findingId}`);
       if (container) container.innerHTML = "";
+      handleSuggestFixClick(findingId, stageId, fixData.finding_data || { id: findingId });
       return;
     }
     if (fixData.file_path && state.currentFile && fixData.file_path !== state.currentFile.path) {
@@ -2834,6 +2850,17 @@
         })
       });
       const applyData = await applyResp.json();
+      if (applyData.status === "already_applied") {
+        setStatus("Status: Already applied.", "ready");
+        runCompiler(null, true);
+        return;
+      }
+      if (applyData.status === "stale_revision" || (!applyData.success && applyData.error && applyData.error.includes("Source changed since this fix was suggested"))) {
+        setStatus("Source changed since this fix was suggested, regenerating...", "running");
+        delete state.findingFixes[findingId];
+        handleSuggestFixClick(findingId, stageId, fixData.finding_data || { id: findingId });
+        return;
+      }
       if (!applyResp.ok || !applyData.success) {
         alert("Patch Application Rejected:\n\n" + (applyData.error || "Validation failed.") + "\n\nThe working source code was not modified to prevent regression.");
         state.editor.setValue(currentCode);
@@ -2925,7 +2952,7 @@
           run_id: runId,
           code: state.editor.getValue(),
           language: state.currentFile.language,
-          use_ai_security: true,
+          use_ai_security: elements.toggleStage12Ai ? elements.toggleStage12Ai.checked : false,
           pause_on_error: true,
           resume_from: resumeFromStage || undefined,
           source_revision: state.sourceRevisionId || 1
@@ -3788,14 +3815,19 @@
 
     // Validate proposal freshness and identity
     if (proposedCode === currentCode) {
-      setStatus("Status: No modifications found in proposed fix.", "warning");
-      alert("The proposed fix does not contain any modifications to the current buffer.");
+      setStatus("Status: Already applied.", "ready");
       closeFixModal();
+      runCompiler(null, true);
       return;
     }
     if (pending.source_revision && pending.source_revision !== state.sourceRevisionId) {
-      alert(`The source code has changed since this fix was generated (Active Rev ${state.sourceRevisionId}, Fix Rev ${pending.source_revision}). Please re-request a suggested fix for the latest source revision.`);
+      setStatus("Source changed since this fix was suggested, regenerating...", "running");
       closeFixModal();
+      if (pending.is_fix_all) {
+        handleFixAllClick(pending.stage_id);
+      } else if (pending.target_finding_id) {
+        openFixModal(pending.target_finding_id, { id: pending.target_finding_id });
+      }
       return;
     }
     if (pending.file_path && state.currentFile && pending.file_path !== state.currentFile.path) {
@@ -3828,6 +3860,22 @@
       });
 
       const applyData = await applyResp.json();
+      if (applyData.status === "already_applied") {
+        setStatus("Status: Already applied.", "ready");
+        closeFixModal();
+        await runCompiler(null, true);
+        return;
+      }
+      if (applyData.status === "stale_revision" || (!applyData.success && applyData.error && applyData.error.includes("Source changed since this fix was suggested"))) {
+        setStatus("Source changed since this fix was suggested, regenerating...", "running");
+        closeFixModal();
+        if (pending.is_fix_all) {
+          handleFixAllClick(pending.stage_id);
+        } else if (pending.target_finding_id) {
+          openFixModal(pending.target_finding_id, { id: pending.target_finding_id });
+        }
+        return;
+      }
       if (!applyResp.ok || !applyData.success) {
         alert("Patch Application Rejected:\n\n" + (applyData.error || "Validation failed.") + "\n\nThe working source code was not modified to prevent regression.");
         setStatus("Patch Rejected: " + (applyData.error || "Validation failed"), "error");

@@ -429,11 +429,35 @@ class PipelineRunTracker:
         stage_id = self._resolve_stage_id(stage_id)
         if stage_id in self.stages:
             st = self.stages[stage_id]
+            now = time.time()
+            st["end_time"] = now
+            if st.get("start_time"):
+                st["duration_ms"] = round((now - st["start_time"]) * 1000, 2)
+            else:
+                st["duration_ms"] = 0.0
             st["status"] = "skipped"
             st["summary"] = f"Skipped: {reason}"
             st["skip_reason"] = reason
             # Skipped stages do NOT increment completed_stages_count
             self.emit_event("stage_skipped", stage_id)
+
+    def warn_stage(self, stage_id: str, summary: str, details: Optional[Dict[str, Any]] = None, findings_count: int = 0):
+        stage_id = self._resolve_stage_id(stage_id)
+        if stage_id in self.stages:
+            st = self.stages[stage_id]
+            now = time.time()
+            st["end_time"] = now
+            if st.get("start_time"):
+                st["duration_ms"] = round((now - st["start_time"]) * 1000, 2)
+            else:
+                st["duration_ms"] = 0.0
+            st["status"] = "warning"
+            st["summary"] = summary
+            st["findings_count"] = findings_count
+            if details:
+                st["details"] = details
+            self.completed_stages_count += 1
+            self.emit_event("stage_warning", stage_id, {"summary": summary, "status": "warning"})
 
     def block_stage(self, stage_id: str, reason: str):
         """Marks a dependent stage blocked because an earlier prerequisite stage failed."""
@@ -1125,56 +1149,85 @@ def execute_pipeline_with_tracker(
     # -------------------------------------------------------------------------
     # STAGE 12: Ollama AI Analysis
     # -------------------------------------------------------------------------
-    tracker.start_stage("ai_security_analysis", "Consulting local Ollama AI agent (qwen2.5-coder:7b-instruct)...")
-    _pace()
-    ai_status = {}
-    try:
-        is_ollama_online, status_msg, health_details = ollama_client.check_health()
-        ai_status = {
-            "online": is_ollama_online,
-            "message": status_msg,
-            "model": ollama_client.model_name,
-            "latency_ms": health_details.get("latency_ms", 0.0)
+    ai_status = {
+        "model": getattr(ollama_client, "model_name", "qwen2.5-coder:3b"),
+        "online": False
+    }
+    if not run_ai_security:
+        tracker.skip_stage(
+            "ai_security_analysis",
+            "AI analysis skipped (disabled in toolbar); deterministic analysis used"
+        )
+    else:
+        tracker.start_stage("ai_security_analysis", "Consulting local Ollama AI agent...")
+        _pace()
+        stage12_timeout = float(os.environ.get("VITAL_STAGE12_TIMEOUT", 8.0))
+        ai_res = {
+            "success": False,
+            "timed_out": False,
+            "error": "",
+            "is_online": False,
+            "findings": findings,
+            "clean": False
         }
 
-        if not is_ollama_online:
-            tracker.complete_stage(
-                "ai_security_analysis",
-                f"Ollama offline ({status_msg}). Deterministic rules remain active.",
-                {"ai_status": ai_status, "findings_count": len(findings)},
-                findings_count=len(findings)
-            )
-        elif not findings:
-            tracker.complete_stage(
-                "ai_security_analysis",
-                f"Ollama online ({ollama_client.model_name}). Code is clean; no suspicious findings requiring investigation.",
-                {"ai_status": ai_status, "findings_count": 0},
-                findings_count=0
-            )
-        else:
-            if run_ai_security:
+        def _run_stage12_worker():
+            try:
+                is_online, status_msg, _ = ollama_client.check_health()
+                if not is_online:
+                    ai_res["is_online"] = False
+                    ai_res["error"] = status_msg
+                    return
+                ai_res["is_online"] = True
+                if not findings:
+                    ai_res["success"] = True
+                    ai_res["clean"] = True
+                    return
+
                 enriched_scan = security_coordinator.run_full_scan(
                     source_code=source_code,
                     ir_code=ir_code,
                     language=detected_lang,
                     use_ai_enrichment=True
                 )
-                findings = enriched_scan.get("findings", findings)
+                ai_res["findings"] = enriched_scan.get("findings", findings)
+                ai_res["success"] = True
+            except Exception as ex:
+                ai_res["error"] = str(ex)
+
+        t_worker = threading.Thread(target=_run_stage12_worker, daemon=True)
+        t_worker.start()
+        t_worker.join(timeout=stage12_timeout)
+
+        if t_worker.is_alive():
+            ai_res["timed_out"] = True
+
+        if ai_res["timed_out"] or not ai_res["success"] or not ai_res["is_online"]:
+            # On timeout, offline, or error: mark Stage 12 "warning" with the message
+            # "AI analysis skipped (timeout/offline); deterministic analysis used",
+            # and continue to Stage 13 and 14 immediately.
+            tracker.warn_stage(
+                "ai_security_analysis",
+                "AI analysis skipped (timeout/offline); deterministic analysis used",
+                {"findings": findings, "stage12_timeout": stage12_timeout, "timed_out": ai_res["timed_out"]},
+                findings_count=len(findings)
+            )
+        else:
+            findings = ai_res["findings"]
+            if ai_res.get("clean"):
                 tracker.complete_stage(
                     "ai_security_analysis",
-                    f"Ollama analyzed {len(findings)} finding(s) and generated recommended remediation diffs.",
-                    {"ai_status": ai_status, "findings": findings},
-                    findings_count=len(findings)
+                    f"Ollama online ({ollama_client.model_name}). Code is clean; no suspicious findings requiring investigation.",
+                    {"findings_count": 0},
+                    findings_count=0
                 )
             else:
                 tracker.complete_stage(
                     "ai_security_analysis",
-                    "AI investigation skipped by user configuration.",
-                    {"ai_status": ai_status, "findings_count": len(findings)},
+                    f"Ollama analyzed {len(findings)} finding(s) and generated recommended remediation diffs.",
+                    {"findings": findings},
                     findings_count=len(findings)
                 )
-    except Exception as e:
-        tracker.fail_stage("ai_security_analysis", f"AI analysis error: {e}")
     _pace()
 
     # -------------------------------------------------------------------------
