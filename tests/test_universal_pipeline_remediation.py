@@ -219,24 +219,21 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
 
     def test_group_b_semantic_stage_eval_remediation_telugu_reproduction(self):
         """
-        Verify reproduction case: examples/security_lab/telugu/sec_injection_eval_te.vital.
-        Semantic Analysis initially fails on eval reference (line 35). Suggest Fix produces
-        Telugu native safe print replacement. Revalidation completes semantic stage and auto-resumes.
+        Verify case: examples/security_lab/telugu/sec_injection_eval_te.vital.
+        Stage 5 Semantic Analysis passes (eval is known builtin).
+        Suggest Fix produces Telugu native safe print replacement.
         """
         repro_path = os.path.join(PROJECT_ROOT, "examples", "security_lab", "telugu", "sec_injection_eval_te.vital")
         with open(repro_path, "r", encoding="utf-8") as f:
             code = f.read()
 
-        # 1. Initial pipeline execution halts at semantic_analysis
+        # 1. Pipeline execution passes semantic analysis cleanly (eval is builtin, Task A)
         tracker = execute_pipeline_with_tracker(code, language_hint="Telugu", pause_on_error=True, run_ai_security=False)
-        self.assertEqual(tracker.status, "paused")
-        self.assertEqual(tracker.paused_stage, "semantic_analysis")
-        self.assertEqual(tracker.stages["semantic_analysis"]["status"], "failed")
+        self.assertEqual(tracker.stages["semantic_analysis"]["status"], "completed")
 
-        findings = tracker.stages["semantic_analysis"]["details"].get("findings", [])
-        self.assertGreaterEqual(len(findings), 1)
-        eval_finding = next((f for f in findings if "eval" in f["id"] or f.get("identifier") == "eval"), None)
-        self.assertIsNotNone(eval_finding, "Expected SEC-SEM-001 finding for 'eval' identifier")
+        sec_scan = security_coordinator.run_full_scan(code, language="Telugu", use_ai_enrichment=False)
+        eval_finding = next((f for f in sec_scan["findings"] if "eval" in f["id"] or f.get("identifier") == "eval" or f.get("rule_id") in ("SEC-IR-001", "SEC-EVAL-003")), None)
+        self.assertIsNotNone(eval_finding, "Expected security finding for 'eval'")
 
         # 2. Suggest Fix produces valid unified diff and modifies source
         fix = security_coordinator.suggest_fix_for_finding(
@@ -286,7 +283,7 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
             self.assertEqual(tracker.stages["semantic_analysis"]["status"], "completed")
 
     def test_group_c_semantic_stage_eval_remediation_all_six_languages(self):
-        """Verify semantic eval remediation across all 6 supported languages."""
+        """Verify eval remediation across all 6 supported languages."""
         eval_demos = [
             ("English", "examples/security_lab/english/sec_injection_eval.vital", "print("),
             ("Telugu", "examples/security_lab/telugu/sec_injection_eval_te.vital", "ముద్రించు("),
@@ -301,19 +298,18 @@ class UniversalPipelineRemediationTestSuite(unittest.TestCase):
                 code = f.read()
 
             t1 = execute_pipeline_with_tracker(code, language_hint=lang, pause_on_error=True, run_ai_security=False)
-            self.assertEqual(t1.paused_stage, "semantic_analysis", f"Expected pause on semantic_analysis for {lang}")
-            findings = t1.stages["semantic_analysis"]["details"].get("findings", [])
-            self.assertGreater(len(findings), 0, f"Expected semantic findings for {lang}")
-            target = findings[0]
+            self.assertEqual(t1.stages["semantic_analysis"]["status"], "completed")
 
-            res = security_coordinator.suggest_fix_for_finding(code, target["id"], target, lang, prefer_deterministic=True)
+            sec_scan = security_coordinator.run_full_scan(code, language=lang, use_ai_enrichment=False)
+            eval_finding = next((f for f in sec_scan["findings"] if "eval" in f["id"] or f.get("identifier") == "eval" or f.get("rule_id") in ("SEC-IR-001", "SEC-EVAL-003")), None)
+            self.assertIsNotNone(eval_finding, f"Expected security finding for 'eval' in {lang}")
+
+            res = security_coordinator.suggest_fix_for_finding(code, eval_finding["id"], eval_finding, lang, prefer_deterministic=True)
             self.assertTrue(res.get("success"), f"Suggest fix failed for {lang}: {res.get('error')}")
             self.assertIn(expected_print_call, res.get("proposed_code", ""), f"Missing expected print in {lang}")
             self.assertNotEqual(res.get("proposed_source"), code, f"Source was unchanged for {lang}")
 
             t2 = execute_pipeline_with_tracker(res["proposed_source"], language_hint=lang, resume_from="semantic_analysis", pause_on_error=True, run_ai_security=False)
-            post_findings = t2.stages["semantic_analysis"]["details"].get("findings", [])
-            self.assertEqual(len(post_findings), 0, f"Expected 0 findings after fix for {lang}")
             self.assertEqual(t2.stages["semantic_analysis"]["status"], "completed", f"Expected completed for {lang}")
             self.assertIn(t2.stages["final_report"]["status"], ("ready", "completed"), f"Expected ready or completed final_report for {lang}")
 

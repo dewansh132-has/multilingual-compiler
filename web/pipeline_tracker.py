@@ -38,6 +38,7 @@ import ast
 import queue
 import re
 import hashlib
+import threading
 from typing import Dict, Any, List, Optional
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -162,101 +163,10 @@ STAGE_ALIASES = {
     "execution_sandbox": "sandbox_execution"
 }
 
-
-class SemanticAnalyzer:
-    """
-    Performs context-sensitive semantic analysis on the generated AST and token stream.
-    Checks for undeclared identifiers, zero division constants, type consistency, and dead code.
-    """
-    def __init__(self):
-        self.diagnostics: List[Dict[str, Any]] = []
-        self.symbols: Dict[str, Dict[str, Any]] = {}
-
-    def analyze(self, ast_tree: ast.AST) -> Dict[str, Any]:
-        self.diagnostics = []
-        self.symbols = {}
-
-        assigned_names = set()
-        safe_builtins = {
-            "print", "input", "range", "len", "int", "str", "float", "bool",
-            "list", "dict", "set", "tuple", "min", "max", "sum", "abs",
-            "True", "False", "None"
-        }
-
-        # First pass: collect function definitions and parameters
-        for node in ast.walk(ast_tree):
-            if isinstance(node, ast.FunctionDef):
-                assigned_names.add(node.name)
-                self.symbols[node.name] = {
-                    "name": node.name,
-                    "type": "function",
-                    "scope": "global",
-                    "line": getattr(node, "lineno", 1),
-                    "value_preview": f"def {node.name}(...)"
-                }
-                for arg in getattr(node.args, "args", []):
-                    assigned_names.add(arg.arg)
-            elif isinstance(node, ast.For) and isinstance(node.target, ast.Name):
-                assigned_names.add(node.target.id)
-
-        for node in ast.walk(ast_tree):
-            # Check constant division by zero
-            if isinstance(node, ast.BinOp):
-                if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.Mod)):
-                    if isinstance(node.right, ast.Constant) and node.right.value == 0:
-                        self.diagnostics.append({
-                            "type": "error",
-                            "line": getattr(node, "lineno", 1),
-                            "message": "Division by zero constant detected in arithmetic expression."
-                        })
-
-            # Check variable assignments to record symbols and inferred types
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        var_name = target.id
-                        assigned_names.add(var_name)
-                        inferred_type = "unknown"
-                        val_preview = ""
-                        if isinstance(node.value, ast.Constant):
-                            inferred_type = type(node.value.value).__name__
-                            val_preview = repr(node.value.value)
-                        elif isinstance(node.value, ast.List):
-                            inferred_type = "list"
-                        elif isinstance(node.value, ast.Dict):
-                            inferred_type = "dict"
-                        elif isinstance(node.value, ast.BinOp):
-                            inferred_type = "numeric"
-                        elif isinstance(node.value, ast.Call):
-                            inferred_type = "function_call"
-
-                        self.symbols[var_name] = {
-                            "name": var_name,
-                            "type": inferred_type,
-                            "scope": "global",
-                            "line": getattr(node, "lineno", 1),
-                            "value_preview": val_preview
-                        }
-
-            # Check for name referenced before assignment (undeclared variable)
-            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                var_name = node.id
-                if var_name not in assigned_names and var_name not in safe_builtins:
-                    self.diagnostics.append({
-                        "type": "error",
-                        "line": getattr(node, "lineno", 1),
-                        "message": f"Identifier '{var_name}' referenced before explicit local assignment."
-                    })
-
-        warning_count = sum(1 for d in self.diagnostics if d["type"] == "warning")
-        error_count = sum(1 for d in self.diagnostics if d["type"] == "error")
-
-        return {
-            "diagnostics": self.diagnostics,
-            "symbols": self.symbols,
-            "warning_count": warning_count,
-            "error_count": error_count
-        }
+try:
+    from semantic import SemanticAnalyzer, get_known_builtins
+except ImportError:
+    from src.semantic import SemanticAnalyzer, get_known_builtins
 
 
 class PipelineRunTracker:
@@ -881,13 +791,13 @@ def execute_pipeline_with_tracker(
                     "stage": "Semantic Analysis",
                     "stage_id": "semantic_analysis",
                     "line": syntax_line,
-                    "column": 1,
+                    "column": d.get("column", 1),
                     "evidence": line_excerpt.strip() if line_excerpt.strip() else msg,
                     "code_excerpt": line_excerpt,
                     "identifier": var_name or ("divzero" if "division by zero" in msg.lower() else ""),
-                    "explanation": "Context-sensitive semantic validation detected an issue with types, scopes, or arithmetic.",
+                    "explanation": d.get("explanation") or ("Static analysis detected constant denominator 0 in division operation." if "division by zero" in msg.lower() else f"Identifier '{var_name}' is referenced without declaration or assignment in this lexical scope."),
                     "potential_impact": "May cause runtime crash or improper variable binding.",
-                    "remediation": "Review identifier declaration or guard arithmetic operation against zero.",
+                    "remediation": d.get("remediation") or ("Guard arithmetic division denominator against zero." if "division by zero" in msg.lower() else f"Declare identifier '{var_name}' with 'let' before use."),
                     "rule_id": rule_id,
                     "status": "confirmed" if is_err else "probable"
                 })

@@ -2716,6 +2716,50 @@
     }
 
     elements.fixModalExplanation.textContent = explanationText;
+
+    const resultsPanel = document.getElementById('fix-modal-results-panel');
+    if (resultsPanel) {
+      let html = '';
+      const applied = data.applied_fixes || data.fixes || [];
+      const rejected = data.rejected_fixes || [];
+      const manual = data.manual_fixes || data.unresolved || [];
+
+      if (applied.length > 0) {
+        applied.forEach(f => {
+          const type = (f.fix_type === 'rule-based' || f.is_deterministic) ? 'Rule-based' : 'AI';
+          const lineStr = f.target_line ? ` L${f.target_line}` : '';
+          html += `<div class="fix-result-item accepted">
+            <span class="fix-result-badge badge-accepted">✓ Applied (${type})</span>
+            <span><strong>[${escapeHtml(f.rule_id || f.finding_id || 'Fix')}${lineStr}]</strong> ${escapeHtml(f.explanation || f.title || 'Resolved')}</span>
+          </div>`;
+        });
+      }
+
+      if (rejected.length > 0) {
+        rejected.forEach(r => {
+          html += `<div class="fix-result-item rejected">
+            <span class="fix-result-badge badge-rejected">✕ Rejected</span>
+            <span><strong>[${escapeHtml(r.rule_id || r.finding_id || 'Issue')}]</strong> ${escapeHtml(r.reason || 'Regression detected')}</span>
+          </div>`;
+        });
+      }
+
+      if (manual.length > 0) {
+        manual.forEach(m => {
+          html += `<div class="fix-result-item manual">
+            <span class="fix-result-badge badge-manual">⚠ Manual Fix</span>
+            <span><strong>[${escapeHtml(m.rule_id || m.finding_id || m.id || 'Issue')}]</strong> ${escapeHtml(m.title || m.reason || 'Requires manual resolution')}</span>
+          </div>`;
+        });
+      }
+
+      if (html) {
+        resultsPanel.innerHTML = html;
+        resultsPanel.style.display = 'flex';
+      } else {
+        resultsPanel.style.display = 'none';
+      }
+    }
     renderDiffPreview(data.diff || `--- original\n+++ proposed\n// Combined stage fixes applied`);
     if (elements.fixSplitBefore) elements.fixSplitBefore.textContent = state.editor.getValue();
     if (elements.fixSplitAfter) elements.fixSplitAfter.textContent = data.proposed_source || "";
@@ -2996,7 +3040,15 @@
         return;
       }
       if (!applyResp.ok || !applyData.success) {
-        alert("Patch Application Rejected:\n\n" + (applyData.error || "Validation failed.") + "\n\nThe working source code was not modified to prevent regression.");
+        setStatus("Patch Rejected: " + (applyData.error || "Validation failed"), "error");
+        const container = document.getElementById(`inline-remediation-${findingId}`);
+        if (container) {
+          container.innerHTML = `
+            <div class="repair-failure-banner" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fecaca; padding: 8px; border-radius: 4px; font-size: 12px;">
+              <span>✕ Patch Application Rejected: ${escapeHtml(applyData.error || "Validation failed.")}</span>
+            </div>
+          `;
+        }
         state.editor.setValue(currentCode);
         saveCurrentFileBuffer();
         return;
@@ -4020,8 +4072,18 @@
         return;
       }
       if (!applyResp.ok || !applyData.success) {
-        alert("Patch Application Rejected:\n\n" + (applyData.error || "Validation failed.") + "\n\nThe working source code was not modified to prevent regression.");
-        setStatus("Patch Rejected: " + (applyData.error || "Validation failed"), "error");
+        const resultsPanel = document.getElementById("fix-modal-results-panel");
+        const errText = applyData.error || "Validation failed.";
+        if (resultsPanel) {
+          resultsPanel.innerHTML = `
+            <div class="fix-result-item error-banner">
+              <strong>✕ Patch Application Rejected:</strong> ${escapeHtml(errText)}<br>
+              <em>The working source code was not modified to prevent regression.</em>
+            </div>
+          ` + resultsPanel.innerHTML;
+          resultsPanel.style.display = "flex";
+        }
+        setStatus("Patch Rejected: " + errText, "error");
         return;
       }
 
