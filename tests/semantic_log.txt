@@ -1,5 +1,5 @@
 --- SEMANTIC ANALYSIS REPORT ---
 
-[ERROR] Line 38: Identifier 'eval' referenced before explicit local assignment.
+[SUCCESS] All identifier bindings, types, and scopes verified without issues.
 
-Symbols extracted: 12
+Symbols extracted: 14
