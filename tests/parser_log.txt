@@ -1,6 +1,4 @@
 --- PARSER VALIDATION REPORT ---
 
-[INFO] Token stream consumed: 242 active tokens validated.
-[INFO] Token Breakdown: Keywords=46, Operators=16, Identifiers=42, Literals=34, Delimiters=89
-[SUCCESS] Structure is Valid.
-[SUCCESS] Logic Tree Verified.
+[ERROR] Unbalanced brackets at line 2:12: Unclosed '{' delimiter opened at line 2
+Found 1 '{' and 0 '}' delimiter tokens.

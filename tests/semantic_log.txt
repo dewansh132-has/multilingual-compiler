@@ -2,4 +2,4 @@
 
 [SUCCESS] All identifier bindings, types, and scopes verified without issues.
 
-Symbols extracted: 14
+Symbols extracted: 1
