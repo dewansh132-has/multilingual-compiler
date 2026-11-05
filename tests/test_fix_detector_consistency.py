@@ -6,6 +6,7 @@ Language Purity, and Honest Error Handling (Tasks B, C, D)
 
 import os
 import sys
+import json
 import unittest
 
 # Ensure VITAL_AI_DISABLED=1
@@ -298,6 +299,132 @@ class TestHttpEndpointsAndRevisions(unittest.TestCase):
         self.assertEqual(len(data.get("applied_fixes", [])), 0)
         self.assertGreater(len(data.get("manual_fixes", [])), 0)
         self.assertIn("manual fix required", data["manual_fixes"][0]["reason"].lower())
+
+    def test_demo_c_http_all_six_programs(self):
+        """Task 6: All six Demo C files pass Stage 5 and reach Stage 11 with 0 findings after Fix All."""
+        demo_c_files = [
+            "examples/security_lab/bengali/sec_injection_eval_bn.vital",
+            "examples/security_lab/english/sec_injection_eval.vital",
+            "examples/security_lab/hindi/sec_injection_eval_hi.vital",
+            "examples/security_lab/marathi/sec_injection_eval_mr.vital",
+            "examples/security_lab/nepali/sec_injection_eval_ne.vital",
+            "examples/security_lab/telugu/sec_injection_eval_te.vital"
+        ]
+        for rel_path in demo_c_files:
+            with self.subTest(file=rel_path):
+                working_source_manager.clear_all_working_copies()
+                # 1. Fetch content
+                c_resp = self.client.get(f"/api/demo-content?path={rel_path}")
+                self.assertEqual(c_resp.status_code, 200)
+                c_data = c_resp.get_json()
+                code = c_data["code"]
+                lang = c_data["language"]
+
+                # 2. Run pipeline
+                r_resp = self.client.post("/api/pipeline/run", json={
+                    "run_id": f"test-init-{os.path.basename(rel_path)}",
+                    "code": code,
+                    "language": lang,
+                    "use_ai_security": False,
+                    "pause_on_error": True,
+                    "source_revision": 1
+                })
+                self.assertEqual(r_resp.status_code, 200)
+                r_data = r_resp.get_json()
+
+                # Stage 5 must be completed cleanly
+                st5 = [s for s in r_data.get("stages", []) if s["id"] == "semantic_analysis"][0]
+                self.assertEqual(st5["status"], "completed", f"Stage 5 failed for {rel_path}: {st5.get('summary')}")
+
+                sec_st = [s for s in r_data.get("stages", []) if s["id"] == "security_analysis"][0]
+                orig_findings = sec_st.get("details", {}).get("findings", [])
+                self.assertGreater(len(orig_findings), 0)
+
+                # 3. Call Fix All
+                fix_resp = self.client.post("/api/ai/fix-all", json={
+                    "stage_id": "security_analysis",
+                    "code": code,
+                    "language": lang,
+                    "path": rel_path,
+                    "file_path": rel_path,
+                    "diagnostics": orig_findings,
+                    "source_revision": 1
+                })
+                self.assertEqual(fix_resp.status_code, 200)
+                fix_data = fix_resp.get_json()
+                self.assertTrue(fix_data.get("success"), f"Fix All failed for {rel_path}: {fix_data.get('error')}")
+                proposed_code = fix_data.get("proposed_source", "")
+
+                # 4. Apply Fix
+                apply_resp = self.client.post("/api/ai/apply-fix", json={
+                    "file_path": rel_path,
+                    "proposed_source": proposed_code,
+                    "code": proposed_code,
+                    "source_revision": 1,
+                    "stage_id": "security_analysis",
+                    "language": lang,
+                    "finding_id": "all"
+                })
+                self.assertEqual(apply_resp.status_code, 200)
+
+                # 5. Re-run pipeline on proposed code
+                rerun_resp = self.client.post("/api/pipeline/run", json={
+                    "run_id": f"test-rerun-{os.path.basename(rel_path)}",
+                    "code": proposed_code,
+                    "language": lang,
+                    "use_ai_security": False,
+                    "pause_on_error": True,
+                    "source_revision": 2
+                })
+                self.assertEqual(rerun_resp.status_code, 200)
+                rerun_data = rerun_resp.get_json()
+
+                rerun_sec = [s for s in rerun_data.get("stages", []) if s["id"] == "security_analysis"][0]
+                rem_findings = rerun_sec.get("details", {}).get("findings", [])
+                self.assertEqual(len(rem_findings), 0, f"Remaining findings for {rel_path}: {rem_findings}")
+
+    def test_stale_working_copy_and_analyzer_version_invalidation(self):
+        """Task 4: Stale working copy with outdated analyzer version is cleanly discarded if invalid."""
+        rel_path = "examples/security_lab/telugu/sec_injection_eval_te.vital"
+        working_source_manager.clear_all_working_copies()
+
+        # Create a stale working copy directly with outdated analyzer_version and invalid syntax
+        norm = rel_path.replace("\\", "/").lstrip("/")
+        code_path = os.path.join(working_source_manager.storage_dir, norm)
+        meta_path = os.path.join(working_source_manager.storage_dir, f"{norm}.meta.json")
+        os.makedirs(os.path.dirname(code_path), exist_ok=True)
+        with open(code_path, "w", encoding="utf-8") as f:
+            f.write("corrupted syntax {{{ let x = ")
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "source_revision": 1,
+                "analyzer_version": "0.9.0",
+                "pristine_sha256": "old_hash",
+                "is_dirty": True
+            }, f)
+
+        # Loading demo content must discard the stale/corrupted working copy
+        resp = self.client.get(f"/api/demo-content?path={rel_path}")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get("success"))
+        # Pristine code returned, not the stale corrupted code
+        self.assertNotIn("corrupted syntax", data["code"])
+        self.assertIn("ఇన్‌పుట్_ధృవీకరించు", data["code"])
+
+    def test_detector_still_reports_failure_message(self):
+        """Task 5: When repair fails because detector still reports target issue, message explicitly states detector issue."""
+        from web.security_analyzer import security_coordinator
+        code = 'let x = 1\nlet query = "SELECT * FROM users WHERE id = " + user_id\nprint(query)'
+        res = security_coordinator.verify_repair(
+            original_source=code,
+            repaired_source=code,  # unchanged source so target issue persists
+            language="English",
+            target_finding_id="SEC-INJ-001-L2"
+        )
+        self.assertEqual(res.get("status"), "Failed")
+        summary = res.get("summary", "")
+        self.assertIn("Detector still reports SEC-INJ-001-L2 at line 2 after the fix; this is a detector issue, not a code issue", summary)
 
 
 if __name__ == "__main__":

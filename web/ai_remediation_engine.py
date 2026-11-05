@@ -37,12 +37,22 @@ from web.ollama_client import ollama_client
 from web.language_context import VitalLanguageIntelligence, language_intelligence
 from web.working_source_manager import working_source_manager
 
+try:
+    from src.semantic import SemanticAnalyzer, get_known_builtins, ANALYZER_VERSION
+except ImportError:
+    try:
+        from semantic import SemanticAnalyzer, get_known_builtins, ANALYZER_VERSION
+    except ImportError:
+        ANALYZER_VERSION = "2.1.0"
+        SemanticAnalyzer = None
+        get_known_builtins = None
+
 CACHE_DIR = os.path.join(PROJECT_ROOT, ".cache", "ai_fixes")
 
 def _get_disk_cached_fix(finding_type: str, snippet: str, language: str, model: str) -> Optional[Dict[str, Any]]:
     try:
         norm = " ".join((snippet or "").strip().split())
-        key = hashlib.sha256(f"{finding_type}:{norm}:{language.lower()}:{model}".encode("utf-8")).hexdigest()
+        key = hashlib.sha256(f"{finding_type}:{norm}:{language.lower()}:{model}:{ANALYZER_VERSION}".encode("utf-8")).hexdigest()
         p = os.path.join(CACHE_DIR, f"{key}.json")
         if os.path.exists(p):
             with open(p, "r", encoding="utf-8") as f:
@@ -57,7 +67,7 @@ def _save_disk_cached_fix(finding_type: str, snippet: str, language: str, model:
     try:
         os.makedirs(CACHE_DIR, exist_ok=True)
         norm = " ".join((snippet or "").strip().split())
-        key = hashlib.sha256(f"{finding_type}:{norm}:{language.lower()}:{model}".encode("utf-8")).hexdigest()
+        key = hashlib.sha256(f"{finding_type}:{norm}:{language.lower()}:{model}:{ANALYZER_VERSION}".encode("utf-8")).hexdigest()
         p = os.path.join(CACHE_DIR, f"{key}.json")
         with open(p, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False)
@@ -378,7 +388,7 @@ class FastStageValidator:
     @classmethod
     def get_hash(cls, source_code: str, language: str) -> str:
         norm = unicodedata.normalize("NFC", source_code or "").replace("\r\n", "\n").replace("\r", "\n")
-        return hashlib.sha256(f"{norm}::{(language or 'English').lower()}".encode("utf-8")).hexdigest()
+        return hashlib.sha256(f"{norm}::{(language or 'English').lower()}::{ANALYZER_VERSION}".encode("utf-8")).hexdigest()
 
     @classmethod
     def clear_cache(cls):
@@ -488,8 +498,14 @@ class FastStageValidator:
         # Stage 5: Semantic Analysis
         if tree is not None:
             try:
-                from semantic import SemanticAnalyzer
-                analyzer = SemanticAnalyzer()
+                if SemanticAnalyzer is not None:
+                    analyzer = SemanticAnalyzer()
+                else:
+                    try:
+                        from src.semantic import SemanticAnalyzer as SA
+                    except ImportError:
+                        from semantic import SemanticAnalyzer as SA
+                    analyzer = SA()
                 sem_res = analyzer.analyze(tree)
                 if sem_res.get("error_count", 0) > 0:
                     for d in sem_res.get("diagnostics", []):

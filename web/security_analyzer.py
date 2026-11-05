@@ -52,6 +52,14 @@ if SRC_DIR not in sys.path:
 
 from web.ollama_client import ollama_client, OllamaClient
 
+try:
+    from src.semantic import ANALYZER_VERSION
+except ImportError:
+    try:
+        from semantic import ANALYZER_VERSION
+    except ImportError:
+        ANALYZER_VERSION = "2.1.0"
+
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # Data Models
@@ -331,8 +339,10 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
                    "Deserializing untrusted pickle payloads leads to immediate remote code execution.")
     }
 
-    def __init__(self, source_lines: List[str]):
+    def __init__(self, source_lines: List[str], source_code: str = ""):
         self.source_lines = source_lines
+        self.source_code = source_code
+        self.vital_source_lines = source_code.splitlines() if source_code else []
         self.findings: List[SecurityFinding] = []
 
     def visit_Call(self, node: ast.Call):
@@ -352,9 +362,23 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
         check_key = attr_name if attr_name in self.DANGEROUS_CALLS else func_name
         if check_key in self.DANGEROUS_CALLS:
             sev, rule_id, title, expl = self.DANGEROUS_CALLS[check_key]
-            line_no = getattr(node, "lineno", None)
+            ir_line_no = getattr(node, "lineno", None)
             col_no = getattr(node, "col_offset", None)
-            evidence = self.source_lines[line_no - 1] if line_no and line_no <= len(self.source_lines) else func_name
+            line_no = ir_line_no
+            evidence = self.source_lines[ir_line_no - 1] if ir_line_no and ir_line_no <= len(self.source_lines) else func_name
+
+            # Map line_no and evidence back to original VITAL source code if available
+            if self.vital_source_lines:
+                pat = re.compile(rf'\b{re.escape(check_key)}\s*\(')
+                found_src_line = None
+                for idx, s_line in enumerate(self.vital_source_lines, start=1):
+                    if pat.search(s_line):
+                        found_src_line = idx
+                        break
+                if found_src_line is not None:
+                    line_no = found_src_line
+                    evidence = self.vital_source_lines[found_src_line - 1].strip()
+
             score = calculate_risk_score(sev, "confirmed", line_no is not None, has_ast_match=True)
 
             self.findings.append(SecurityFinding(
@@ -957,14 +981,14 @@ class DeterministicSecurityScanner:
         return findings
 
     @classmethod
-    def scan_python_ir_ast(cls, ir_code: str) -> List[SecurityFinding]:
+    def scan_python_ir_ast(cls, ir_code: str, source_code: str = "") -> List[SecurityFinding]:
         findings = []
         if not ir_code or not ir_code.strip():
             return findings
 
         try:
             tree = ast.parse(ir_code)
-            visitor = PythonASTSecurityVisitor(ir_code.splitlines())
+            visitor = PythonASTSecurityVisitor(ir_code.splitlines(), source_code=source_code)
             visitor.visit(tree)
             findings.extend(visitor.findings)
         except SyntaxError:
@@ -1184,7 +1208,7 @@ class SecurityAnalysisCoordinator:
                     ir_code = ""
 
             if ir_code:
-                findings.extend(DeterministicSecurityScanner.scan_python_ir_ast(ir_code))
+                findings.extend(DeterministicSecurityScanner.scan_python_ir_ast(ir_code, source_code=source_code))
                 findings.extend(DeterministicSecurityScanner.scan_execution_boundary(source_code, ir_code))
             else:
                 findings.extend(DeterministicSecurityScanner.scan_execution_boundary(source_code, ""))
@@ -1341,7 +1365,7 @@ class SecurityAnalysisCoordinator:
         import unicodedata
         norm_src = unicodedata.normalize("NFC", source_code).replace("\r\n", "\n").replace("\r", "\n")
         src_rev_hash = hashlib.sha256(norm_src.encode("utf-8")).hexdigest()
-        raw = f"{src_rev_hash}|{finding_id}|{rule_id}|{line_no}|{evidence.strip()}|{model}|{language.lower()}"
+        raw = f"{src_rev_hash}|{finding_id}|{rule_id}|{line_no}|{evidence.strip()}|{model}|{language.lower()}|{ANALYZER_VERSION}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     def generate_deterministic_fix(
@@ -2569,7 +2593,7 @@ class SecurityAnalysisCoordinator:
 
         # 5. Formulate verification status
         target_resolved = True
-        if target_finding_id:
+        if target_finding_id and target_finding_id.lower() not in ("all", "*"):
             target_resolved = any(
                 rf.get("id") == target_finding_id or 
                 (rf.get("rule_id") and rf.get("rule_id") in str(target_finding_id))
@@ -2582,7 +2606,16 @@ class SecurityAnalysisCoordinator:
         elif len(new_regressions) > 0 or not target_resolved:
             status = "Failed"
             if not target_resolved:
-                summary = f"Repair validation: Failed. Target issue ({target_finding_id}) is still present in the repaired code."
+                target_line = "?"
+                for rf in remaining_findings:
+                    if rf.get("id") == target_finding_id or (rf.get("rule_id") and rf.get("rule_id") in str(target_finding_id)):
+                        target_line = str(rf.get("line", "?"))
+                        break
+                if target_line == "?":
+                    m_line = re.search(r'-L(\d+)', str(target_finding_id))
+                    if m_line:
+                        target_line = m_line.group(1)
+                summary = f"Detector still reports {target_finding_id} at line {target_line} after the fix; this is a detector issue, not a code issue"
             else:
                 summary = f"Repair validation: Failed. {len(remaining_findings)} finding(s) remain, and {len(new_regressions)} regression(s) were detected."
         elif len(remaining_findings) == 0:

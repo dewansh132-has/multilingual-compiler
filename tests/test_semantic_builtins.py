@@ -132,6 +132,38 @@ class TestSemanticBuiltins(unittest.TestCase):
         self.assertGreater(len(errs), 0, "Expected division by zero error")
         self.assertTrue(any("division by zero" in d.get("message", "").lower() for d in errs))
 
+    def test_eval_call_with_indic_print_statement_string_literal(self):
+        """Calls with string literals containing Indic print statements do not parse inside string."""
+        indic_evals = [
+            'eval("print(\'సురక్షితమైన మాక్ మూల్యాంకనం అమలవుతోంది...\')")',
+            'eval("print(\'सुरक्षित मॉक मूल्यांकन चल रहा है...\')")',
+            'eval("print(\'নিরাপদ মক মূল্যায়ন কার্যকর হচ্ছে...\')")',
+            'eval("print(\'सुरक्षित मॉक मूल्यांकन सुरू आहे...\')")',
+            'eval("print(\'सुरक्षित नक्कली मूल्याङ्कन चलिरहेको छ...\')")'
+        ]
+        for expr in indic_evals:
+            with self.subTest(expr=expr):
+                code = f"let status = 1\n{expr}\nprint(status)"
+                res = self._analyze_source(code)
+                errs = [d for d in res.get("diagnostics", []) if d.get("type") == "error"]
+                self.assertEqual(len(errs), 0, f"Expression {expr} caused semantic error: {errs}")
+                # Ensure words inside string literal were not added to symbols or identifiers
+                for forbidden in ["సురక్షితమైన", "सुरक्षित", "নিরাপদ"]:
+                    self.assertNotIn(forbidden, res.get("symbols", {}))
+
+    def test_all_six_security_lab_demo_c_files_pass_semantic_analysis(self):
+        """All 6 Demo C files must pass Semantic Analysis (Stage 5) with zero semantic errors."""
+        import glob
+        pattern = os.path.join(PROJECT_ROOT, "examples", "security_lab", "*", "sec_injection_eval*.vital")
+        files = glob.glob(pattern)
+        self.assertEqual(len(files), 6, f"Expected 6 Demo C files, found {len(files)}")
+        for fpath in files:
+            with open(fpath, "r", encoding="utf-8") as f:
+                code = f.read()
+            res = self._analyze_source(code)
+            errs = [d for d in res.get("diagnostics", []) if d.get("type") == "error"]
+            self.assertEqual(len(errs), 0, f"File {os.path.basename(fpath)} had semantic errors: {errs}")
+
 
 if __name__ == "__main__":
     unittest.main()

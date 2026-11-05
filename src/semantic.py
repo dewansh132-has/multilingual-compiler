@@ -13,6 +13,7 @@ import ast
 import difflib
 from typing import Dict, Any, List, Set, Optional
 
+ANALYZER_VERSION = "2.1.0"
 _KNOWN_BUILTINS_CACHE: Optional[Set[str]] = None
 
 BASE_BUILTIN_NAMES = {
@@ -22,6 +23,13 @@ BASE_BUILTIN_NAMES = {
     "sorted", "open", "eval", "exec", "compile", "type", "isinstance",
     # Multilingual dynamic evaluation aliases (Stage 11 security analyzes these)
     "मूल्यांकन", "మూల్యాంకనం", "মূল্যায়ন", "मूल्यांकन_करा", "मूल्याङ्कन",
+    "निष्पादित", "చలాఓ", "అమలు_చేయి", "চালাও", "নিষ্পাদন", "चालवा", "चलाऊ",
+    "खोलो", "తెరువు", "খুলুন", "उघडा", "खोल",
+    # Multilingual print / input / len / range
+    "लिखो", "ముద్రించు", "ছাপাও", "लिहा", "छाप",
+    "पढ़ो", "తీసుకో", "পড়ো", "वाचा", "पढ",
+    "लंबाई", "పొడవు", "দৈর্ঘ্য", "लांबी", "लम्बाइ",
+    "सीमा", "పరిధి", "পরিসীমা", "पल्ला",
     # str-conversion helpers
     "chr", "ord", "bin", "hex", "oct", "repr", "format", "ascii",
     # Common constants & primitives

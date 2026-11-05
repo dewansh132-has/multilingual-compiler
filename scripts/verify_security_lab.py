@@ -58,12 +58,12 @@ def main():
         print(f"Error: No .vital files found matching {search_pattern}")
         sys.exit(1)
 
-    print("=" * 105)
+    print("=" * 115)
     print("VITAL SECURITY LAB VERIFICATION REPORT (HTTP ENDPOINTS, VITAL_AI_DISABLED=1)")
-    print("=" * 105)
-    header = f"{'File':<30} | {'Lang':<8} | {'Stages 1-10 (B/A)':<18} | {'Findings (B/A)':<14} | {'App':<4} | {'Rej':<4} | {'Man':<4} | {'Time (s)':<8}"
+    print("=" * 115)
+    header = f"{'File':<30} | {'Lang':<8} | {'Stage 5':<8} | {'Stages 1-10 (B/A)':<18} | {'Findings':<10} | {'App':<4} | {'Rej':<4} | {'Man':<4} | {'Time (s)':<8}"
     print(header)
-    print("-" * 105)
+    print("-" * 115)
 
     client = app.test_client()
     working_source_manager.clear_all_working_copies()
@@ -155,6 +155,10 @@ def main():
             })
         s10_a_str = "GREEN" if s10_after_ok else f"FAIL({first_fail_a[:7] if first_fail_a else 'ERR'})"
 
+        st5_b = next((s.get("status") for s in stages_before if s.get("id") == "semantic_analysis"), "unknown")
+        st5_a = next((s.get("status") for s in stages_after if s.get("id") == "semantic_analysis"), "unknown")
+        st5_str = "PASS" if (st5_b in ("completed", "passed") and st5_a in ("completed", "passed")) else f"{st5_b[:4]}"
+
         sec_stage_after = next((s for s in stages_after if s["id"] == "security_analysis"), None)
         findings_after = sec_stage_after.get("details", {}).get("findings", []) if sec_stage_after else []
         f_after_count = len(findings_after)
@@ -162,11 +166,11 @@ def main():
         stages_ba = f"{s10_b_str} -> {s10_a_str}"
         findings_ba = f"{f_before_count} -> {f_after_count}"
 
-        print(f"{fname:<30} | {lang:<8} | {stages_ba:<18} | {findings_ba:<14} | {app_count:<4} | {rej_count:<4} | {man_count:<4} | {elapsed:<8.2f}")
+        print(f"{fname:<30} | {lang:<8} | {st5_str:<8} | {stages_ba:<18} | {findings_ba:<10} | {app_count:<4} | {rej_count:<4} | {man_count:<4} | {elapsed:<8.2f}")
 
     working_source_manager.clear_all_working_copies()
 
-    print("=" * 105)
+    print("=" * 115)
     print(f"SUMMARY: Total Programs: {total_programs}")
     print(f"  • Stages 1-10 GREEN Before Fix All: {green_before} / {total_programs} ({green_before*100/total_programs:.1f}%)")
     print(f"  • Stages 1-10 GREEN After Fix All:  {green_after} / {total_programs} ({green_after*100/total_programs:.1f}%)")

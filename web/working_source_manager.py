@@ -25,6 +25,14 @@ import time
 import hashlib
 from typing import Dict, Any, List, Optional, Tuple
 
+try:
+    from src.semantic import ANALYZER_VERSION
+except ImportError:
+    try:
+        from semantic import ANALYZER_VERSION
+    except ImportError:
+        ANALYZER_VERSION = "2.1.0"
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORKING_STORE_DIR = os.path.join(PROJECT_ROOT, "examples", "saved", "working_copies")
 MAX_UNDO_HISTORY = 50
@@ -213,7 +221,8 @@ class WorkingSourceManager:
                 # Requirement B2: Compile working copy through stages 1-10 in memory
                 wc_lang = language or meta.get("language", "")
                 wc_passed, wc_fail_stage, _ = self.check_stages_1_to_10(working_code, wc_lang)
-                if not wc_passed:
+                is_stale_analyzer = meta.get("analyzer_version") != ANALYZER_VERSION
+                if not wc_passed or (is_stale_analyzer and not wc_passed):
                     pr_passed, pr_fail_stage, _ = self.check_stages_1_to_10(original_code, wc_lang)
                     if pr_passed or (pr_fail_stage != wc_fail_stage):
                         # Discard corrupted working copy automatically!
@@ -364,6 +373,7 @@ class WorkingSourceManager:
             meta["language"] = language
             meta["last_saved"] = now
             meta["is_dirty"] = (new_hash != orig_hash)
+            meta["analyzer_version"] = ANALYZER_VERSION
 
             # Atomic file write: write to temp and rename
             temp_code_path = code_path + ".tmp"
