@@ -1,212 +1,158 @@
 --- ABSTRACT SYNTAX TREE (VISUAL) ---
 
 Module (Root)
-├── Assign
-│   ├── Name (id='current_session_user')
-│   │   └── Store
-│   └── Constant (value=1042)
-├── Assign
-│   ├── Name (id='current_session_token')
-│   │   └── Store
-│   └── Constant (value='sess_live_token_77a9b')
-├── Assign
-│   ├── Name (id='is_authenticated')
-│   │   └── Store
-│   └── Constant (value=1)
 ├── FunctionDef
 │   ├── arguments
-│   │   └── arg
-│   └── If
-│       ├── Compare
-│       │   ├── Name (id='token')
-│       │   │   └── Load
-│       │   ├── Eq
-│       │   └── Constant (value='sess_live_token_77a9b')
-│       ├── Return
-│       │   └── Constant (value=1)
-│       └── Return
-│           └── Constant (value=0)
-├── FunctionDef
-│   ├── arguments
-│   │   ├── arg
-│   │   └── arg
-│   ├── If
-│   │   ├── Compare
-│   │   │   ├── Name (id='is_active')
-│   │   │   │   └── Load
-│   │   │   ├── Eq
-│   │   │   └── Constant (value=0)
-│   │   ├── Expr
-│   │   │   └── Call
-│   │   │       ├── Name (id='print')
-│   │   │       │   └── Load
-│   │   │       └── Constant (value='Warning: Account currently suspended.')
-│   │   └── Return
-│   │       └── Constant (value=0)
-│   └── Return
-│       └── Constant (value=1)
-├── FunctionDef
-│   ├── arguments
-│   │   ├── arg
-│   │   ├── arg
-│   │   ├── arg
 │   │   └── arg
 │   ├── Assign
-│   │   ├── Name (id='auth_ok')
+│   │   ├── Name (id='text_len')
 │   │   │   └── Store
-│   │   └── Call
-│   │       ├── Name (id='verify_session')
-│   │       │   └── Load
-│   │       └── Name (id='current_session_token')
-│   │           └── Load
+│   │   └── Constant (value=24)
 │   ├── If
 │   │   ├── Compare
-│   │   │   ├── Name (id='auth_ok')
+│   │   │   ├── Name (id='text_len')
 │   │   │   │   └── Load
-│   │   │   ├── Eq
-│   │   │   └── Constant (value=0)
+│   │   │   ├── Gt
+│   │   │   └── Constant (value=100)
 │   │   ├── Expr
 │   │   │   └── Call
 │   │   │       ├── Name (id='print')
 │   │   │       │   └── Load
-│   │   │       └── Constant (value='Access Denied: Invalid Session Token.')
+│   │   │       └── Constant (value='Input rejected: Exceeds maximum length.')
 │   │   └── Return
 │   │       └── Constant (value=0)
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
 │   ├── Expr
 │   │   └── Call
 │   │       ├── Name (id='print')
 │   │       │   └── Load
-│   │       └── Constant (value='Session authenticated for user:')
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
+│   │       └── Constant (value='Constructing SQL database query...')
+│   ├── Assign
+│   │   ├── Name (id='query_prefix')
+│   │   │   └── Store
+│   │   └── Constant (value="SELECT user_id, email FROM accounts WHERE role = 'user' AND ")
+│   ├── Assign
+│   │   ├── Name (id='full_query')
+│   │   │   └── Store
+│   │   └── BinOp
+│   │       ├── Name (id='query_prefix')
 │   │       │   └── Load
-│   │       └── Name (id='caller_id')
-│   │           └── Load
-│   ├── If
-│   │   ├── Compare
-│   │   │   ├── Name (id='amount')
-│   │   │   │   └── Load
-│   │   │   ├── Gt
-│   │   │   └── Constant (value=500)
-│   │   ├── Assign
-│   │   │   ├── Name (id='status_ok')
-│   │   │   │   └── Store
-│   │   │   └── Call
-│   │   │       ├── Name (id='check_account_status')
-│   │   │       │   └── Load
-│   │   │       ├── Name (id='from_account_id')
-│   │   │       │   └── Load
-│   │   │       └── Constant (value=0)
-│   │   ├── If
-│   │   │   ├── Compare
-│   │   │   │   ├── Name (id='status_ok')
-│   │   │   │   │   └── Load
-│   │   │   │   ├── Eq
-│   │   │   │   └── Constant (value=0)
-│   │   │   ├── Expr
-│   │   │   │   └── Call
-│   │   │   │       ├── Name (id='print')
-│   │   │   │       │   └── Load
-│   │   │   │       └── Constant (value='Transfer blocked: Source account suspended.')
-│   │   │   └── Return
-│   │   │       └── Constant (value=0)
-│   │   └── Expr
-│   │       └── Call
-│   │           ├── Name (id='print')
-│   │           │   └── Load
-│   │           └── Constant (value='Bypassing suspension if for small transfer amount.')
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Constant (value='Initiating transfer amount:')
-│   ├── Expr
-│   │   └── Call
-│   │       ├── Name (id='print')
-│   │       │   └── Load
-│   │       └── Name (id='amount')
+│   │       ├── Add
+│   │       └── Name (id='user_filter')
 │   │           └── Load
 │   ├── Expr
 │   │   └── Call
 │   │       ├── Name (id='print')
 │   │       │   └── Load
-│   │       └── Constant (value='Funds transferred successfully :')
+│   │       └── Constant (value='Executing query against mock database engine:')
 │   ├── Expr
 │   │   └── Call
 │   │       ├── Name (id='print')
 │   │       │   └── Load
-│   │       └── Name (id='to_account_id')
+│   │       └── Name (id='full_query')
 │   │           └── Load
 │   └── Return
 │       └── Constant (value=1)
 ├── FunctionDef
 │   ├── arguments
-│   │   ├── arg
 │   │   └── arg
-│   ├── If
-│   │   ├── Compare
-│   │   │   ├── Name (id='confirm_code')
-│   │   │   │   └── Load
-│   │   │   ├── Eq
-│   │   │   └── Constant (value=9999)
-│   │   ├── Assign
-│   │   │   ├── Name (id='account_closed')
-│   │   │   │   └── Store
-│   │   │   └── Constant (value=1)
-│   │   ├── Expr
-│   │   │   └── Call
-│   │   │       ├── Name (id='print')
-│   │   │       │   └── Load
-│   │   │       └── Constant (value='Account closed successfully:')
-│   │   ├── Assign
-│   │   │   ├── Name (id='acc_status')
-│   │   │   │   └── Store
-│   │   │   └── Constant (value=1)
-│   │   ├── Expr
-│   │   │   └── Call
-│   │   │       ├── Name (id='print')
-│   │   │       │   └── Load
-│   │   │       └── Name (id='acc_status')
-│   │   │           └── Load
-│   │   └── Return
-│   │       └── Constant (value=1)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='Building operating system maintenance task...')
+│   ├── Assign
+│   │   ├── Name (id='base_command')
+│   │   │   └── Store
+│   │   └── BinOp
+│   │       ├── Constant (value="echo 'Maintenance log: '  ")
+│   │       ├── Add
+│   │       └── Name (id='command_args')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='Dispatching command line string:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='base_command')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='eval')
+│   │       │   └── Load
+│   │       └── Constant (value="print('Safe mock evaluation executing...')")
 │   └── Return
-│       └── Constant (value=0)
+│       └── Constant (value=1)
 ├── Expr
 │   └── Call
 │       ├── Name (id='print')
 │       │   └── Load
-│       └── Constant (value='=== VITAL Security Lab: Account & Permission Manager ===')
+│       └── Constant (value='=== VITAL Security Lab: Dynamic Injection Harness ===')
 ├── Assign
-│   ├── Name (id='target_acc')
+│   ├── Name (id='malicious_sql_input')
 │   │   └── Store
-│   └── Constant (value=5001)
+│   └── Constant (value='1=1 OR id IS NOT NULL --')
 ├── Assign
-│   ├── Name (id='victim_acc')
-│   │   └── Store
-│   └── Constant (value=9002)
-├── Assign
-│   ├── Name (id='result')
+│   ├── Name (id='is_valid')
 │   │   └── Store
 │   └── Call
-│       ├── Name (id='transfer_funds')
+│       ├── Name (id='mock_sanitize_input')
 │       │   └── Load
-│       ├── Name (id='current_session_user')
+│       └── Name (id='malicious_sql_input')
+│           └── Load
+├── If
+│   ├── Compare
+│   │   ├── Name (id='is_valid')
+│   │   │   └── Load
+│   │   ├── Eq
+│   │   └── Constant (value=1)
+│   ├── Assign
+│   │   ├── Name (id='query_status')
+│   │   │   └── Store
+│   │   └── Call
+│   │       ├── Name (id='execute_database_query')
+│   │       │   └── Load
+│   │       └── Name (id='malicious_sql_input')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='Query dispatch status:')
+│   └── Expr
+│       └── Call
+│           ├── Name (id='print')
+│           │   └── Load
+│           └── Name (id='query_status')
+│               └── Load
+├── Assign
+│   ├── Name (id='malicious_shell_arg')
+│   │   └── Store
+│   └── Constant (value='run_diagnostics  rm -rf /tmp/vital_sandbox')
+├── Assign
+│   ├── Name (id='cmd_status')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='dispatch_system_command')
 │       │   └── Load
-│       ├── Name (id='victim_acc')
-│       │   └── Load
-│       ├── Name (id='target_acc')
-│       │   └── Load
-│       └── Constant (value=250)
+│       └── Name (id='malicious_shell_arg')
+│           └── Load
 ├── Expr
 │   └── Call
 │       ├── Name (id='print')
 │       │   └── Load
-│       └── Constant (value='Transfer status code:')
+│       └── Constant (value='Command execution status:')
 └── Expr
     └── Call
         ├── Name (id='print')
         │   └── Load
-        └── Name (id='result')
+        └── Name (id='cmd_status')
             └── Load
