@@ -1,0 +1,692 @@
+--- ABSTRACT SYNTAX TREE (VISUAL) ---
+
+Module (Root)
+├── Assign
+│   ├── Name (id='वर्तमान_सत्र_उपयोगकर्ता')
+│   │   └── Store
+│   └── Constant (value=1042)
+├── Assign
+│   ├── Name (id='वर्तमान_सत्र_टोकन')
+│   │   └── Store
+│   └── Constant (value='sess_live_token_77a9b')
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
+│   └── If
+│       ├── Compare
+│       │   ├── Name (id='टोकन')
+│       │   │   └── Load
+│       │   ├── Eq
+│       │   └── Constant (value='sess_live_token_77a9b')
+│       ├── Return
+│       │   └── Constant (value=1)
+│       └── Return
+│           └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='सक्रिय_है')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
+│   └── If
+│       ├── Compare
+│       │   ├── Name (id='श्रेणी_कोड')
+│       │   │   └── Load
+│       │   ├── Eq
+│       │   └── Constant (value=1)
+│       ├── Expr
+│       │   └── Call
+│       │       ├── Name (id='print')
+│       │       │   └── Load
+│       │       └── Constant (value='खाता श्रेणी: मानक व्यक्तिगत बचत खाता.')
+│       ├── Return
+│       │   └── Constant (value=1000)
+│       └── If
+│           ├── Compare
+│           │   ├── Name (id='श्रेणी_कोड')
+│           │   │   └── Load
+│           │   ├── Eq
+│           │   └── Constant (value=2)
+│           ├── Expr
+│           │   └── Call
+│           │       ├── Name (id='print')
+│           │       │   └── Load
+│           │       └── Constant (value='खाता श्रेणी: व्यावसायिक व्यापारिक चालू खाता.')
+│           ├── Return
+│           │   └── Constant (value=50000)
+│           ├── Expr
+│           │   └── Call
+│           │       ├── Name (id='print')
+│           │       │   └── Load
+│           │       └── Constant (value='खाता श्रेणी: संस्थागत कॉर्पोरेट खाता.')
+│           └── Return
+│               └── Constant (value=500000)
+├── FunctionDef
+│   ├── arguments
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='लेनदेन_संख्या')
+│   │   │   │   └── Load
+│   │   │   ├── Gt
+│   │   │   └── Constant (value=25)
+│   │   └── Expr
+│   │       └── Call
+│   │           ├── Name (id='print')
+│   │           │   └── Load
+│   │           └── Constant (value='सुरक्षा चेतावनी: 24 घंटे लेनदेन आवृत्ति सीमा पार.')
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   └── If
+│       ├── Compare
+│       │   ├── Name (id='केवाईसी_स्थिति')
+│       │   │   └── Load
+│       │   ├── Eq
+│       │   └── Constant (value=1)
+│       ├── Expr
+│       │   └── Call
+│       │       ├── Name (id='print')
+│       │       │   └── Load
+│       │       └── Constant (value='केवाईसी स्थिति: पूर्ण रूप से सत्यापित निवासी ग्राहक.')
+│       ├── Return
+│       │   └── Constant (value=1)
+│       ├── If
+│       │   ├── Compare
+│       │   │   ├── Name (id='क्षेत्राधिकार_कोड')
+│       │   │   │   └── Load
+│       │   │   ├── Eq
+│       │   │   └── Constant (value=99)
+│       │   ├── Expr
+│       │   │   └── Call
+│       │   │       ├── Name (id='print')
+│       │   │       │   └── Load
+│       │   │       └── Constant (value='केवाईसी बाईपास: विशेष विदेशी क्षेत्राधिकार छूट स्वीकृत.')
+│       │   └── Return
+│       │       └── Constant (value=1)
+│       ├── Expr
+│       │   └── Call
+│       │       ├── Name (id='print')
+│       │       │   └── Load
+│       │       └── Constant (value='केवाईसी स्थिति: असत्यापित खाता, अंतरण सीमित.')
+│       └── Return
+│           └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── Assign
+│   │   ├── Name (id='शुल्क')
+│   │   │   └── Store
+│   │   └── Constant (value=15)
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='अंतर्राष्ट्रीय_है')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=1)
+│   │   ├── Assign
+│   │   │   ├── Name (id='शुल्क')
+│   │   │   │   └── Store
+│   │   │   └── BinOp
+│   │   │       ├── BinOp
+│   │   │       │   ├── Name (id='राशि')
+│   │   │       │   │   └── Load
+│   │   │       │   ├── Mult
+│   │   │       │   └── Constant (value=2)
+│   │   │       ├── Div
+│   │   │       └── Constant (value=100)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='अंतर्राष्ट्रीय स्विफ्ट वायर अंतरण शुल्क लागू:')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Name (id='शुल्क')
+│   │   │           └── Load
+│   │   └── Return
+│   │       └── Name (id='शुल्क')
+│   │           └── Load
+│   └── Return
+│       └── Name (id='शुल्क')
+│           └── Load
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='कॉलर_आईडी')
+│   │   │   │   └── Load
+│   │   │   ├── NotEq
+│   │   │   └── Name (id='स्रोत_खाता')
+│   │   │       └── Load
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   ├── Assign
+│   │   ├── Name (id='सत्र_ठीक')
+│   │   │   └── Store
+│   │   └── Call
+│   │       ├── Name (id='सत्र_सत्यापित_करें')
+│   │       │   └── Load
+│   │       └── Name (id='वर्तमान_सत्र_टोकन')
+│   │           └── Load
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='सत्र_ठीक')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='पहुँच अस्वीकृत: अमान्य सत्र टोकन.')
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='सत्र उपयोगकर्ता हेतु प्रमाणित किया गया:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='कॉलर_आईडी')
+│   │           └── Load
+│   ├── Assign
+│   │   ├── Name (id='स्थिति_ठीक')
+│   │   │   └── Store
+│   │   └── Call
+│   │       ├── Name (id='खाता_स्थिति_जांचें')
+│   │       │   └── Load
+│   │       └── Constant (value=0)
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='स्थिति_ठीक')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='अंतरण अवरुद्ध: स्रोत खाता निलंबित =.')
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   ├── Assign
+│   │   ├── Name (id='आवृत्ति_ठीक')
+│   │   │   └── Store
+│   │   └── Call
+│   │       ├── Name (id='दैनिक_लेनदेन_आवृत्ति_जांच')
+│   │       │   └── Load
+│   │       └── Constant (value=4)
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='आवृत्ति_ठीक')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=0)
+│   │   └── Return
+│   │       └── Constant (value=0)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='तार_अंतरण_शुल्क_गणना')
+│   │       │   └── Load
+│   │       ├── Name (id='राशि')
+│   │       │   └── Load
+│   │       └── Constant (value=0)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='राशि')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='तार अंतरण शुल्क:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='सफलतापूर्वक धनराशि लक्ष्य खाते में भेजी गई:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='लक्ष्य_खाता')
+│   │           └── Load
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='टोकन_कोड')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value='TEMP_ELEVATE_ADMIN_2026')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='सुरक्षा चेतावनी: उच्च स्तरीय अनुमति बिना प्रबंधक हस्ताक्षर प्रदान गई:')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Name (id='कॉलर_आईडी')
+│   │   │           └── Load
+│   │   └── Return
+│   │       └── Constant (value=1)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='अनुमति अनुरोध अस्वीकृत: अमान्य टोकन.')
+│   └── Return
+│       └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='जोखिम_स्कोर')
+│   │   │   │   └── Load
+│   │   │   ├── GtE
+│   │   │   └── Constant (value=80)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='मनी लॉन्ड्रिंग रोकथाम अलर्ट: खाता तुरंत फ्रीज किया गया:')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Name (id='खाता_आईडी')
+│   │   │           └── Load
+│   │   └── Return
+│   │       └── Constant (value=1)
+│   └── Return
+│       └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='शाखा_पिन')
+│   │   │   │   └── Load
+│   │   │   ├── Eq
+│   │   │   └── Constant (value=1234)
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='शाखा प्रबंधक ओवरराइड द्वारा खाता अनफ्रीज स्वीकृत:')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Name (id='खाता_आईडी')
+│   │   │           └── Load
+│   │   └── Return
+│   │       └── Constant (value=1)
+│   └── Return
+│       └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   └── arg
+│   └── Return
+│       └── Constant (value=0)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   └── arg
+│   ├── Assign
+│   │   ├── Name (id='अंतिम_शेष')
+│   │   │   └── Store
+│   │   └── BinOp
+│   │       ├── BinOp
+│   │       │   ├── Name (id='प्रारंभिक_शेष')
+│   │       │   │   └── Load
+│   │       │   ├── Add
+│   │       │   └── Name (id='कुल_जमा')
+│   │       │       └── Load
+│   │       ├── Sub
+│   │       └── Name (id='कुल_निकासी')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='========================================')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='मासिक खाता लेखा परीक्षा विवरण:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='खाता_आईडी')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='प्रारंभिक शेष राशि:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='प्रारंभिक_शेष')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='कुल जमा राशि:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='कुल_जमा')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='कुल निकासी राशि:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='कुल_निकासी')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='अंतिम शेष राशि:')
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Name (id='अंतिम_शेष')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='========================================')
+│   └── Return
+│       └── Name (id='अंतिम_शेष')
+│           └── Load
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   ├── arg
+│   │   └── arg
+│   ├── If
+│   │   ├── Compare
+│   │   │   ├── Name (id='वर्तमान_शेष')
+│   │   │   │   └── Load
+│   │   │   ├── Lt
+│   │   │   └── Constant (value=0)
+│   │   ├── Assign
+│   │   │   ├── Name (id='ऋणात्मक_राशि')
+│   │   │   │   └── Store
+│   │   │   └── BinOp
+│   │   │       ├── Constant (value=0)
+│   │   │       ├── Sub
+│   │   │       └── Name (id='वर्तमान_शेष')
+│   │   │           └── Load
+│   │   ├── If
+│   │   │   ├── Compare
+│   │   │   │   ├── Name (id='ऋणात्मक_राशि')
+│   │   │   │   │   └── Load
+│   │   │   │   ├── Gt
+│   │   │   │   └── Name (id='स्वीकृत_ओवरड्राफ्ट')
+│   │   │   │       └── Load
+│   │   │   └── Expr
+│   │   │       └── Call
+│   │   │           ├── Name (id='print')
+│   │   │           │   └── Load
+│   │   │           └── Constant (value='ओवरड्राफ्ट उल्लंघन: स्वीकृत साख सीमा पार!')
+│   │   ├── Expr
+│   │   │   └── Call
+│   │   │       ├── Name (id='print')
+│   │   │       │   └── Load
+│   │   │       └── Constant (value='खाता स्वीकृत ओवरड्राफ्ट सुरक्षा सीमा के भीतर =.')
+│   │   └── Return
+│   │       └── Constant (value=1)
+│   └── Return
+│       └── Constant (value=1)
+├── FunctionDef
+│   ├── arguments
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   ├── arg
+│   │   └── arg
+│   ├── Assign
+│   │   ├── Name (id='समेकित_राशि')
+│   │   │   └── Store
+│   │   └── BinOp
+│   │       ├── BinOp
+│   │       │   ├── Name (id='b1')
+│   │       │   │   └── Load
+│   │       │   ├── Add
+│   │       │   └── Name (id='b2')
+│   │       │       └── Load
+│   │       ├── Add
+│   │       └── Name (id='b3')
+│   │           └── Load
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='शाखा कुल ग्राहक अभिरक्षा संपत्ति:')
+│   └── Expr
+│       └── Call
+│           ├── Name (id='print')
+│           │   └── Load
+│           └── Name (id='समेकित_राशि')
+│               └── Load
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='=== VITAL सुरक्षा लैब: खाता एवं अनुमति प्रबंधक ===')
+├── Assign
+│   ├── Name (id='लक्ष्य_खाता')
+│   │   └── Store
+│   └── Constant (value=5001)
+├── Assign
+│   ├── Name (id='पीड़ित_खाता')
+│   │   └── Store
+│   └── Constant (value=9002)
+├── Assign
+│   ├── Name (id='अंतरण_परिणाम_छोटा')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='राशि_स्थानांतरित_करें')
+│       │   └── Load
+│       ├── Name (id='वर्तमान_सत्र_उपयोगकर्ता')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       ├── Name (id='लक्ष्य_खाता')
+│       │   └── Load
+│       └── Constant (value=250)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='अंतरण स्थिति कोड (सीमा से कम):')
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Name (id='अंतरण_परिणाम_छोटा')
+│           └── Load
+├── Assign
+│   ├── Name (id='अंतरण_परिणाम_बड़ा')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='राशि_स्थानांतरित_करें')
+│       │   └── Load
+│       ├── Name (id='वर्तमान_सत्र_उपयोगकर्ता')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       ├── Name (id='लक्ष्य_खाता')
+│       │   └── Load
+│       └── Constant (value=5000)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='अंतरण स्थिति कोड (सीमा से अधिक):')
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Name (id='अंतरण_परिणाम_बड़ा')
+│           └── Load
+├── Assign
+│   ├── Name (id='श्रेणी_सीमा')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='खाता_श्रेणी_मान्यता')
+│       │   └── Load
+│       └── Constant (value=2)
+├── Assign
+│   ├── Name (id='केवाईसी_परिणाम_१')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='ग्राहक_पहचान_केवाईसी_सत्यापन')
+│       │   └── Load
+│       ├── Constant (value=1)
+│       └── Constant (value=101)
+├── Assign
+│   ├── Name (id='केवाईसी_परिणाम_२')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='ग्राहक_पहचान_केवाईसी_सत्यापन')
+│       │   └── Load
+│       ├── Constant (value=0)
+│       └── Constant (value=99)
+├── Assign
+│   ├── Name (id='अनुमति_उन्नयन')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='अस्थायी_प्रशासक_अनुमति_अनुदान')
+│       │   └── Load
+│       ├── Name (id='वर्तमान_सत्र_उपयोगकर्ता')
+│       │   └── Load
+│       └── Constant (value='TEMP_ELEVATE_ADMIN_2026')
+├── Assign
+│   ├── Name (id='फ्रीज_कार्रवाई')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='संदिग्ध_खाता_फ्रीज_करें')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       └── Constant (value=85)
+├── Assign
+│   ├── Name (id='अनफ्रीज_स्वीकृत')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='खाता_अनफ्रीज_अपील_निर्णय')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       └── Constant (value=1234)
+├── Assign
+│   ├── Name (id='विवरण_१')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='मासिक_विवरण_तैयार_करें')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       ├── Constant (value=15000)
+│       ├── Constant (value=4500)
+│       └── Constant (value=6200)
+├── Assign
+│   ├── Name (id='विवरण_२')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='मासिक_विवरण_तैयार_करें')
+│       │   └── Load
+│       ├── Name (id='लक्ष्य_खाता')
+│       │   └── Load
+│       ├── Constant (value=5000)
+│       ├── Constant (value=8500)
+│       └── Constant (value=1500)
+├── Assign
+│   ├── Name (id='ओवरड्राफ्ट_जांच')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='ओवरड्राफ्ट_सीमा_सत्यापन')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       ├── UnaryOp
+│       │   ├── USub
+│       │   └── Constant (value=2000)
+│       └── Constant (value=5000)
+├── Assign
+│   ├── Name (id='शाखा_समेकित_योग')
+│   │   └── Store
+│   └── Call
+│       ├── Name (id='शाखा_समेकित_शेष_ऑडिट')
+│       │   └── Load
+│       ├── Name (id='पीड़ित_खाता')
+│       │   └── Load
+│       ├── Name (id='लक्ष्य_खाता')
+│       │   └── Load
+│       ├── Constant (value=7001)
+│       ├── Name (id='विवरण_१')
+│       │   └── Load
+│       ├── Name (id='विवरण_२')
+│       │   └── Load
+│       └── Constant (value=30000)
+└── Expr
+    └── Call
+        ├── Name (id='print')
+        │   └── Load
+        └── Constant (value='खाता अनुमति एवं सुरक्षा परीक्षण निष्पादन संपन्न.')

@@ -1,0 +1,214 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo C: Injection & Unsafe Execution Patterns
+// Language: English
+// Difficulty: Advanced
+// Seeded Defects: Command Injection (CWE-78), SQL Injection (CWE-89), Eval Sink (CWE-95)
+
+function mock_sanitize_input(raw_text) {
+    // Defective sanitizer: Only checks length, does not escape quotes or shell metacharacters
+    let text_len = 24
+    if (text_len > 100) {
+        print("Input rejected: Exceeds maximum length.")
+        return 0
+    }
+    return 1
+}
+
+function execute_database_query(user_filter) {
+    // VULNERABILITY 1: SQL Injection via unescaped string concatenation (CWE-89)
+    // Raw user input flows directly into simulated query sink
+    print("Constructing SQL database query...")
+    let query_prefix = "SELECT user_id, email FROM accounts WHERE role = 'user' AND "
+    let full_query = query_prefix + user_filter
+    print("Executing query against mock database engine:")
+    print(full_query)
+    return 1
+}
+
+function dispatch_system_command(command_args) {
+    // VULNERABILITY 2: Shell Command Injection Pattern (CWE-78)
+    // Untrusted arguments concatenated directly into shell execution string
+    print("Building operating system maintenance task...")
+    let base_command = "echo 'Maintenance log: ' ; " + command_args
+    print("Dispatching command line string:")
+    print(base_command)
+
+    // VULNERABILITY 3: Dangerous dynamic evaluation call (CWE-95)
+    // Simulates dynamic code execution sink using eval
+    eval("print('Safe mock evaluation executing...')")
+    return 1
+}
+
+function dynamic_expression_evaluator(expression_string) {
+    print("Evaluating dynamic mathematical expression string:")
+    print(expression_string)
+    // Unsafe evaluation sink simulating calculator injection
+    eval("print('Evaluating expression...')")
+    return 1
+}
+
+function parse_ldap_distinguished_name(user_attribute) {
+    // LDAP Injection Mock Pattern
+    let ldap_filter = "(&(objectClass=user)(uid=" + user_attribute + "))"
+    print("Constructed LDAP Search Filter Query:")
+    print(ldap_filter)
+    return ldap_filter
+}
+
+function execute_xpath_query(xml_query_param) {
+    // XPath Injection Mock Pattern
+    let xpath_expr = "/inventory/product[category='" + xml_query_param + "']"
+    print("Constructed XPath XML Query:")
+    print(xpath_expr)
+    return xpath_expr
+}
+
+function restore_filesystem_archive(archive_name) {
+    // Simulated tar extraction with command chaining vulnerability
+    print("Initiating archive unpack procedure for:")
+    print(archive_name)
+    let tar_cmd = "tar -xvf " + archive_name
+    print("System invocation command:")
+    print(tar_cmd)
+    return 1
+}
+
+function validate_database_connection_pool_health(ping_count) {
+    if (ping_count > 5) {
+        print("Database cluster connection latency: Optimal.")
+        return 1
+    }
+    print("Database cluster connection: Degraded.")
+    return 0
+}
+
+function log_security_event_telemetry(event_type, severity, payload_data) {
+    print("========================================")
+    print("Security Event Incident Log:")
+    print(event_type)
+    print("Severity Rating:")
+    print(severity)
+    print("Captured Raw Payload:")
+    print(payload_data)
+    print("========================================")
+    return severity
+}
+
+function audit_query_execution_plan(plan_cost, index_used) {
+    if (index_used == 1) {
+        print("Query optimizer: Index Scan utilized. Low execution cost.")
+        return 1
+    }
+    print("Warning: Full Table Scan detected! Potential denial of service.")
+    return 0
+}
+
+function format_string_template_injection(template_string, context_var) {
+    print("Interpolating unescaped format string token:")
+    let formatted = "Template: " + template_string + " Context: " + context_var
+    print(formatted)
+    return formatted
+}
+
+function nosql_mongo_expression_filter(collection_name, raw_field_value) {
+    let mongo_query = "db." + collection_name + ".find({ status: " + raw_field_value + " })"
+    print("Constructed MongoDB NoSQL Query Projection:")
+    print(mongo_query)
+    return mongo_query
+}
+
+function system_backup_tar_dispatch(target_folder, compression_level) {
+    let backup_job = "tar -czf backup.tar.gz -C " + target_folder + " --level=" + compression_level
+    print("System Automated Backup Daemon Command:")
+    print(backup_job)
+    return 1
+}
+
+function audit_taint_data_provenance(origin, destination, is_trusted) {
+    if (is_trusted == 0) {
+        print("Security Alert: Tainted data flow crossing trust boundary without sanitizer!")
+        return 0
+    }
+    print("Data provenance verified: Trusted internal transmission.")
+    return 1
+}
+
+function validate_serialized_object_signature(payload_stream) {
+    print("Inspecting incoming serialized object stream for gadgets:")
+    print(payload_stream)
+    // Deserialization check
+    if (payload_stream == "rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcA==") {
+        print("Alert: Untrusted Java/Python deserialization gadget stream detected!")
+        return 0
+    }
+    return 1
+}
+
+function sanitize_cross_site_scripting_html(raw_html) {
+    print("Checking HTML input for stored/reflected XSS script payloads:")
+    print(raw_html)
+    return 1
+}
+
+function inspect_sql_parameterized_query_plan(query_id, param_count) {
+    if (param_count <= 0) {
+        print("Static Analysis Warning: Query executed without bound parameters!")
+        return 0
+    }
+    print("Parameterized query plan safely compiled with placeholder arguments.")
+    return 1
+}
+
+function sanitize_database_identifier_name(identifier_token) {
+    print("Checking database table or column name against identifier whitelist:")
+    print(identifier_token)
+    return 1
+}
+
+function audit_sql_wildcard_escaping(raw_filter_term) {
+    print("Escaping SQL LIKE wildcard metacharacters (%) and (_):")
+    print(raw_filter_term)
+    return raw_filter_term
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: Dynamic Injection Harness ===")
+let malicious_sql_input = "1=1 OR id IS NOT NULL; --"
+let is_valid = mock_sanitize_input(malicious_sql_input)
+
+if (is_valid == 1) {
+    let query_status = execute_database_query(malicious_sql_input)
+    print("Query dispatch status:")
+    print(query_status)
+}
+
+// Malicious shell chaining payload with shell injection metacharacter
+let malicious_shell_arg = "run_diagnostics --verbose"
+let cmd_status = dispatch_system_command(malicious_shell_arg)
+print("Command execution status:")
+print(cmd_status)
+
+let calc_expr = "10 + 20 * 5"
+let eval_status = dynamic_expression_evaluator(calc_expr)
+
+let ldap_res = parse_ldap_distinguished_name("admin)(|(password=*")
+let xpath_res = execute_xpath_query("books' or '1'='1")
+let restore_res = restore_filesystem_archive("backup.tar.gz; cat /etc/shadow")
+
+let fmt_res = format_string_template_injection("Hello {user.__init__}", "guest")
+let nosql_res = nosql_mongo_expression_filter("accounts", "{ $ne: null }")
+let backup_res = system_backup_tar_dispatch("/var/vital_logs", "9")
+let taint_check = audit_taint_data_provenance("external_http_payload", "sql_database_sink", 0)
+
+let deser_check = validate_serialized_object_signature("rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcA==")
+let xss_check = sanitize_cross_site_scripting_html("<script>alert('xss')</script>")
+let param_plan = inspect_sql_parameterized_query_plan(9002, 3)
+
+let id_check = sanitize_database_identifier_name("user_accounts")
+let wild_check = audit_sql_wildcard_escaping("100%_bonus")
+
+let db_health = validate_database_connection_pool_health(10)
+let plan_check = audit_query_execution_plan(250, 0)
+let log_event = log_security_event_telemetry("SQL_INJECTION_ATTEMPT", 3, malicious_sql_input)
+
+print("Dynamic injection verification harness completed.")

@@ -1,0 +1,9 @@
+--- SYMBOL TABLE (SEMANTICS) ---
+Variable Name	| Type	| Current Value
+--------------------------------------------------
+units	| int	| 150
+charge	| int	| 50
+rate	| int	| 5
+total	| int	| 800
+discount	| float	| 80.0
+final_bill	| float	| 720.0

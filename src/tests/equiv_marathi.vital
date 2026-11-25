@@ -1,0 +1,23 @@
+टीप मराठी: चल, गणित, छपाई, अट, लूप
+घ्या x = 10
+घ्या y = 20
+घ्या result = x जोडा y
+
+लिहा("Sum is:")
+लिहा(result)
+
+जर (result पेक्षा_मोठे 25) {
+    लिहा("Greater than 25")
+}
+नाहीतर {
+    लिहा("Not greater than 25")
+}
+
+घ्या counter = 0
+घ्या total = 0
+जोपर्यंत (counter पेक्षा_लहान 5) {
+    घ्या total = total जोडा counter
+    घ्या counter = counter जोडा 1
+}
+लिहा("Loop total:")
+लिहा(total)

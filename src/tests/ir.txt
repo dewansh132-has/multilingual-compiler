@@ -1,0 +1,22 @@
+# Code 3: Electricity Bill Calculator
+
+units = 150
+charge = 50
+rate = 5
+
+print("--- Bill Generation ---")
+
+total = charge + (units * rate)
+discount = 0
+
+if (units > 100) :
+    print("Discount Applied!")
+    discount = total * 10 / 100
+ 
+else :
+    print("No Discount.")
+
+
+final_bill = total - discount
+print("Final Bill :")
+print(final_bill)

@@ -1,0 +1,171 @@
+// English: Comprehensive Student Academic Record & Grading Suite
+// Difficulty: Advanced
+// Domain: Education Analytics & Statistical Performance
+
+let institution_name = "Apex Institute of Advanced Engineering"
+let passing_threshold = 50
+let honors_threshold = 85
+
+function compute_weighted_score(math, physics, cs, ethics) {
+    let weight_math = 30
+    let weight_physics = 25
+    let weight_cs = 35
+    let weight_ethics = 10
+
+    let score_part_1 = math * weight_math
+    let score_part_2 = physics * weight_physics
+    let score_part_3 = cs * weight_cs
+    let score_part_4 = ethics * weight_ethics
+
+    let total_weighted = score_part_1 + score_part_2 + score_part_3 + score_part_4
+    let final_pct = total_weighted / 100
+    return final_pct
+}
+
+function determine_letter_grade(score) {
+    if (score >= 90) {
+        return 1
+    }
+    if (score >= 80) {
+        return 2
+    }
+    if (score >= 70) {
+        return 3
+    }
+    if (score >= 60) {
+        return 4
+    }
+    if (score >= 50) {
+        return 5
+    }
+    return 6
+}
+
+function evaluate_gpa_points(letter_grade_code) {
+    if (letter_grade_code == 1) {
+        return 40
+    }
+    if (letter_grade_code == 2) {
+        return 35
+    }
+    if (letter_grade_code == 3) {
+        return 30
+    }
+    if (letter_grade_code == 4) {
+        return 25
+    }
+    if (letter_grade_code == 5) {
+        return 20
+    }
+    return 0
+}
+
+function process_student_dossier(roll_no, m, p, c, e) {
+    let final_score = compute_weighted_score(m, p, c, e)
+    let grade_code = determine_letter_grade(final_score)
+    let gpa_points = evaluate_gpa_points(grade_code)
+
+    print("----------------------------------------")
+    print("Student Academic Evaluation Profile:")
+    print("Roll Number:")
+    print(roll_no)
+    print("Computed Weighted Percentage:")
+    print(final_score)
+    print("Letter Grade Code (1=A, 2=B, 3=C, 4=D, 5=E, 6=F):")
+    print(grade_code)
+    print("Deci-GPA Scaled Points (40=4.0):")
+    print(gpa_points)
+
+    if (final_score >= honors_threshold) {
+        print("Distinction: Dean's Honors List Qualification!")
+    } else {
+        if (final_score < passing_threshold) {
+            print("ALERT: Academic Remediation Review Required!")
+        } else {
+            print("Status: Good Academic Standing.")
+        }
+    }
+    return final_score
+}
+
+function calculate_cohort_mean(s1, s2, s3, s4, s5) {
+    let total_sum = s1 + s2 + s3 + s4 + s5
+    let cohort_mean = total_sum / 5
+    print("Cohort Comprehensive Average Score:")
+    print(cohort_mean)
+    return cohort_mean
+}
+
+function count_honors_candidates(s1, s2, s3, s4, s5) {
+    let honors_count = 0
+    if (s1 >= honors_threshold) {
+        let honors_count = honors_count + 1
+    }
+    if (s2 >= honors_threshold) {
+        let honors_count = honors_count + 1
+    }
+    if (s3 >= honors_threshold) {
+        let honors_count = honors_count + 1
+    }
+    if (s4 >= honors_threshold) {
+        let honors_count = honors_count + 1
+    }
+    if (s5 >= honors_threshold) {
+        let honors_count = honors_count + 1
+    }
+    print("Total Dean's Honors Recipients in Cohort:")
+    print(honors_count)
+    return honors_count
+}
+
+function count_at_risk_students(s1, s2, s3, s4, s5) {
+    let risk_count = 0
+    if (s1 < passing_threshold) {
+        let risk_count = risk_count + 1
+    }
+    if (s2 < passing_threshold) {
+        let risk_count = risk_count + 1
+    }
+    if (s3 < passing_threshold) {
+        let risk_count = risk_count + 1
+    }
+    if (s4 < passing_threshold) {
+        let risk_count = risk_count + 1
+    }
+    if (s5 < passing_threshold) {
+        let risk_count = risk_count + 1
+    }
+    print("Total At-Risk Students Requiring Mentorship:")
+    print(risk_count)
+    return risk_count
+}
+
+function compute_score_variance(s1, s2, s3, s4, s5, mean_val) {
+    let d1 = (s1 - mean_val) * (s1 - mean_val)
+    let d2 = (s2 - mean_val) * (s2 - mean_val)
+    let d3 = (s3 - mean_val) * (s3 - mean_val)
+    let d4 = (s4 - mean_val) * (s4 - mean_val)
+    let d5 = (s5 - mean_val) * (s5 - mean_val)
+    let total_deviation = d1 + d2 + d3 + d4 + d5
+    let variance = total_deviation / 5
+    print("Cohort Statistical Performance Variance:")
+    print(variance)
+    return variance
+}
+
+print("Initiating Academic Registry System:")
+print(institution_name)
+
+let student_1_score = process_student_dossier(1001, 92, 88, 96, 90)
+let student_2_score = process_student_dossier(1002, 74, 68, 82, 75)
+let student_3_score = process_student_dossier(1003, 42, 51, 48, 60)
+let student_4_score = process_student_dossier(1004, 88, 84, 91, 86)
+let student_5_score = process_student_dossier(1005, 62, 59, 71, 68)
+
+let cohort_average = calculate_cohort_mean(student_1_score, student_2_score, student_3_score, student_4_score, student_5_score)
+count_honors_candidates(student_1_score, student_2_score, student_3_score, student_4_score, student_5_score)
+count_at_risk_students(student_1_score, student_2_score, student_3_score, student_4_score, student_5_score)
+compute_score_variance(student_1_score, student_2_score, student_3_score, student_4_score, student_5_score, cohort_average)
+
+
+print("Academic Processing Concluded for All Enrolled Students.")

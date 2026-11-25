@@ -1,0 +1,180 @@
+// English: Warehouse Inventory & Supply Chain Management System
+// Difficulty: Advanced
+// Domain: Supply Chain & Warehouse Logistics
+
+let warehouse_name = "Global Logistics Center Alpha"
+let operational_status = 1
+
+function calculate_reorder_level(daily_demand, lead_time_days, safety_stock) {
+    let base_demand = daily_demand * lead_time_days
+    let reorder_point = base_demand + safety_stock
+    return reorder_point
+}
+
+function evaluate_holding_cost(unit_cost, holding_rate_pct, quantity) {
+    let cost_per_unit_annual = (unit_cost * holding_rate_pct) / 100
+    let total_holding_cost = cost_per_unit_annual * quantity
+    return total_holding_cost
+}
+
+function calculate_economic_order_quantity(annual_demand, order_cost, unit_cost, holding_rate_pct) {
+    let annual_holding_unit = (unit_cost * holding_rate_pct) / 100
+    if (annual_holding_unit <= 0) {
+        return 0
+    }
+    let numerator = 2 * annual_demand * order_cost
+    let ratio = numerator / annual_holding_unit
+    let estimate = 100
+    let step = 0
+    while (step < 10) {
+        let estimate = (estimate + (ratio / estimate)) / 2
+        let step = step + 1
+    }
+    return estimate
+}
+
+function process_item_stock(item_name, on_hand, reserved, safety_stock, unit_price) {
+    let available_stock = on_hand - reserved
+    let inventory_value = on_hand * unit_price
+    let needs_reorder = 0
+    if (available_stock <= safety_stock) {
+        let needs_reorder = 1
+    } else {
+        let needs_reorder = 0
+    }
+
+    print("--- Stock Evaluation for Item ---")
+    print(item_name)
+    print("Available Quantity:")
+    print(available_stock)
+    print("Valuation Amount:")
+    print(inventory_value)
+    if (needs_reorder == 1) {
+        print("ACTION: Trigger Procurement Reorder Notice!")
+    } else {
+        print("Stock Healthy: Operating within safe replenishment bounds.")
+    }
+    return available_stock
+}
+
+function allocate_order_units(current_stock, requested_units, priority_flag) {
+    let allocated = 0
+    let backorder = 0
+    if (current_stock >= requested_units) {
+        let allocated = requested_units
+        let backorder = 0
+    } else {
+        if (priority_flag == 1) {
+            let allocated = current_stock
+            let backorder = requested_units - current_stock
+        } else {
+            let allocated = 0
+            let backorder = requested_units
+        }
+    }
+    print("Units Allocated to Customer:")
+    print(allocated)
+    print("Unfulfilled Backorder Units:")
+    print(backorder)
+    return allocated
+}
+
+function update_bin_location(bin_index, quantity, max_bin_capacity) {
+    if (quantity > max_bin_capacity) {
+        print("Error: Bin capacity exceeded! Overflow directed to staging area.")
+        return 0
+    }
+    let occupancy_pct = (quantity * 100) / max_bin_capacity
+    print("Bin Assigned Successfully:")
+    print(bin_index)
+    print("Occupancy Percentage:")
+    print(occupancy_pct)
+    return 1
+}
+
+function simulate_restock_cycle(starting_inventory, daily_sales_rate, days_in_cycle, replenishment_qty) {
+    let current_balance = starting_inventory
+    let day = 1
+    let total_sold = 0
+    let stockout_days = 0
+
+    while (day <= days_in_cycle) {
+        if (day == 7) {
+            let current_balance = current_balance + replenishment_qty
+            print("Day 7: Scheduled Supplier Shipment Received.")
+        }
+        if (current_balance >= daily_sales_rate) {
+            let current_balance = current_balance - daily_sales_rate
+            let total_sold = total_sold + daily_sales_rate
+        } else {
+            let total_sold = total_sold + current_balance
+            let current_balance = 0
+            let stockout_days = stockout_days + 1
+        }
+        let day = day + 1
+    }
+
+    print("End of Cycle Inventory Balance:")
+    print(current_balance)
+    print("Total Units Sold During Cycle:")
+    print(total_sold)
+    print("Stockout Days Encountered:")
+    print(stockout_days)
+    return current_balance
+}
+
+function generate_category_summary(category_name, item_count, total_units, average_margin) {
+    let projected_profit = total_units * average_margin
+    print("========================================")
+    print("Category Performance Audit:")
+    print(category_name)
+    print("Unique Catalog SKUs:")
+    print(item_count)
+    print("Total Physical Units:")
+    print(total_units)
+    print("Projected Gross Profit:")
+    print(projected_profit)
+    print("========================================")
+    return projected_profit
+}
+
+if (operational_status == 1) {
+    print("Initializing Enterprise Supply Chain Engine:")
+}
+print(warehouse_name)
+
+let reorder_p1 = calculate_reorder_level(25, 4, 30)
+print("Reorder Level for High-Velocity SKU:")
+print(reorder_p1)
+
+let holding_p1 = evaluate_holding_cost(120, 15, 450)
+print("Annual Estimated Holding Expense:")
+print(holding_p1)
+
+let eoq_p1 = calculate_economic_order_quantity(10000, 75, 40, 20)
+print("Computed Economic Order Quantity:")
+print(eoq_p1)
+
+let item1_avail = process_item_stock("Precision Industrial Bearing 40mm", 180, 45, 50, 65)
+let item2_avail = process_item_stock("Fiberglass Heat Shield Insulation", 35, 10, 40, 110)
+process_item_stock("High-Torque Electric Stepper Motor", 220, 30, 60, 185)
+
+allocate_order_units(item1_avail, 80, 1)
+allocate_order_units(item2_avail, 50, 1)
+
+update_bin_location(12, 135, 200)
+update_bin_location(14, 190, 250)
+
+simulate_restock_cycle(300, 22, 14, 250)
+print("14-Day Restock Simulation Completed Successfully.")
+
+let profit_cat_a = generate_category_summary("Rotary Motion Components", 18, 2400, 18)
+let profit_cat_b = generate_category_summary("Thermal Management Systems", 12, 1150, 32)
+let profit_cat_c = generate_category_summary("Precision Actuators", 24, 3600, 45)
+
+let combined_portfolio_profit = profit_cat_a + profit_cat_b + profit_cat_c
+print("Total Projected Operations Profit Across Catalog:")
+print(combined_portfolio_profit)
+
+
+print("Enterprise Warehouse Execution Concluded with 0 Anomalies.")

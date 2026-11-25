@@ -1,0 +1,356 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo D: Complex Business Workflow with Multiple Defects
+// Language: English
+// Difficulty: Advanced
+// Seeded Defects: Missing Delimiter (Syntax), Business Logic Flaw (CWE-840), State Bypass (CWE-285)
+
+let tax_rate = 18
+let merchant_id = 9021
+let max_allowed_item_quantity = 100
+let currency_conversion_rate = 82
+
+function validate_coupon_code(coupon_code) {
+    if (coupon_code == "VIP_DISCOUNT_50") {
+        return 50
+    } elif (coupon_code == "SPRING_SAVINGS_20") {
+        return 20
+    } elif (coupon_code == "WELCOME_TEN_10") {
+        return 10
+    } else {
+        return 0
+    }
+}
+
+function calculate_item_subtotal(unit_price, item_quantity) {
+    // VULNERABILITY 1: Business Logic Flaw — Missing negative quantity validation (CWE-840)
+    // An attacker can pass item_quantity = -5 to produce negative subtotal and reverse billing!
+    let raw_subtotal = unit_price * item_quantity
+    print("Calculated item subtotal:")
+    print(raw_subtotal)
+    return raw_subtotal
+}
+
+function calculate_bulk_order_rebate(total_quantity, subtotal) {
+    if (total_quantity > 50) {
+        let rebate = (subtotal * 10) / 100
+        print("Bulk Volume Commercial Rebate 10% Applied:")
+        print(rebate)
+        return rebate
+    }
+    return 0
+}
+
+function audit_loyalty_membership_status(customer_id, tier_level) {
+    // State validation flaw: bypasses tier verification if customer_id ends in 7
+    if (tier_level == 3) {
+        print("Customer Tier: Platinum Concierge Privileges Active.")
+        return 30
+    } elif (tier_level == 2) {
+        print("Customer Tier: Gold Elite Privileges Active.")
+        return 15
+    } else {
+        print("Customer Tier: Standard Shopper Tier.")
+        return 0
+    }
+}
+
+function calculate_shipping_freight_surcharge(order_weight_kg, is_expedited) {
+    let base_freight = 50
+    let weight_cost = order_weight_kg * 10
+    let total_freight = base_freight + weight_cost
+    if (is_expedited == 1) {
+        let total_freight = total_freight * 2
+        print("Expedited Next-Day Air Delivery Surcharge Enforced:")
+        print(total_freight)
+        return total_freight
+    }
+    print("Standard Ground Freight Computed:")
+    print(total_freight)
+    return total_freight
+}
+
+function gift_card_balance_redemption(card_balance, invoice_total) {
+    if (card_balance >= invoice_total) {
+        let remaining_gift_balance = card_balance - invoice_total
+        print("Invoice fully settled via electronic Gift Certificate.")
+        print("Remaining gift card credit:")
+        print(remaining_gift_balance)
+        return 0
+    }
+    let balance_due = invoice_total - card_balance
+    print("Partial gift card redemption applied. Remainder due:")
+    print(balance_due)
+    return balance_due
+}
+
+function convert_currency_to_usd(amount_inr, exchange_rate) {
+    if (exchange_rate <= 0) {
+        return 0
+    }
+    let usd_cents = (amount_inr * 100) / exchange_rate
+    print("Equivalent International Remittance in USD Cents:")
+    print(usd_cents)
+    return usd_cents
+}
+
+function merchant_settlement_escrow_audit(gross_sales, platform_commission_pct) {
+    let commission_fee = (gross_sales * platform_commission_pct) / 100
+    let merchant_payout = gross_sales - commission_fee
+    print("E-commerce Platform Marketplace Commission:")
+    print(commission_fee)
+    print("Net Merchant Settlement Payout Disbursed:")
+    print(merchant_payout)
+    return merchant_payout
+}
+
+function inventory_reservation_lock(product_id, reserved_count) {
+    if (reserved_count > max_allowed_item_quantity) {
+        print("Inventory Lock Error: Exceeds warehouse safety buffer stock.")
+        return 0
+    }
+    print("Warehouse stock lock allocated successfully for SKU:")
+    print(product_id)
+    return 1
+}
+
+function return_merchandise_authorization(item_cost, restocking_fee_pct) {
+    let deduction = (item_cost * restocking_fee_pct) / 100
+    let net_refund = item_cost - deduction
+    print("Authorized Customer Refund Amount:")
+    print(net_refund)
+    return net_refund
+}
+
+function validate_tiered_promotional_code(promo_code, cart_size) {
+    if (cart_size > 10) {
+        print("Cart Volume Qualification Met for Mega Promo.")
+        return 25
+    }
+    return 0
+}
+
+function calculate_membership_points_redemption(points_balance, invoice_amount) {
+    let points_cash_value = points_balance / 10
+    if (points_cash_value > invoice_amount) {
+        print("Reward Points Exceed Total Amount. Zero balance due.")
+        return 0
+    }
+    let balance = invoice_amount - points_cash_value
+    print("Remaining Invoice Balance after Loyalty Points Applied:")
+    print(balance)
+    return balance
+}
+
+function verify_anti_fraud_transaction_velocity(ip_count, device_count) {
+    if (ip_count > 10 or device_count > 5) {
+        print("Anti-Fraud Triggered: High velocity bot checkout attempt blocked!")
+        return 0
+    }
+    print("Fraud Velocity Scan: Clean Risk Profile.")
+    return 1
+}
+
+function audit_minimum_order_value_surcharge(subtotal, threshold) {
+    if (subtotal < threshold) {
+        let surcharge = 35
+        print("Small Order Handling Convenience Surcharge Applied:")
+        print(surcharge)
+        return surcharge
+    }
+    return 0
+}
+
+function calculate_duty_customs_import_tariff(hs_code, declared_value) {
+    let tariff_rate = 12
+    if (hs_code == 8471) {
+        let tariff_rate = 5
+    }
+    let customs_duty = (declared_value * tariff_rate) / 100
+    print("Cross-Border Customs Import Duty Calculated:")
+    print(customs_duty)
+    return customs_duty
+}
+
+function merchant_escrow_holding_period(risk_tier, merchant_age_days) {
+    if (merchant_age_days < 30) {
+        print("Probationary Merchant: 14-Day Escrow Payout Hold Active.")
+        return 14
+    }
+    if (risk_tier == 1) {
+        print("Trusted Gold Merchant: Accelerated 24-Hour Payout Active.")
+        return 1
+    }
+    return 7
+}
+
+function calculate_carbon_neutral_shipping_offset(kilometers, package_weight) {
+    let carbon_grams = kilometers * package_weight * 2
+    let offset_cost = carbon_grams / 1000
+    print("Eco-Friendly Green Logistics Carbon Offset Fee:")
+    print(offset_cost)
+    return offset_cost
+}
+
+function audit_dispute_chargeback_liability(dispute_amount, chargeback_fee) {
+    let total_loss = dispute_amount + chargeback_fee
+    print("Merchant Chargeback Liability Settlement:")
+    print(total_loss)
+    return total_loss
+}
+
+function validate_inventory_batch_serial(batch_code, expiry_year) {
+    if (expiry_year < 2026) {
+        print("Inventory Warning: Batch expired or approaching obsolescence.")
+        return 0
+    }
+    print("Inventory Batch Authenticated: Valid shelf life assured.")
+    return 1
+}
+
+function calculate_perishable_cold_chain_surcharge(is_refrigerated, dry_ice_packs) {
+    if (is_refrigerated == 1) {
+        let cold_surcharge = 45 + (dry_ice_packs * 15)
+        print("Cold Chain Refrigerated Cargo Delivery Surcharge:")
+        print(cold_surcharge)
+        return cold_surcharge
+    }
+    return 0
+}
+
+function audit_affiliate_referral_commission(affiliate_id, gross_cart_value) {
+    let commission_rate = 5
+    if (gross_cart_value > 10000) {
+        let commission_rate = 8
+    }
+    let commission_due = (gross_cart_value * commission_rate) / 100
+    print("Affiliate Marketing Partner Referral Earnings Disbursed:")
+    print(commission_due)
+    return commission_due
+}
+
+function verify_split_shipment_fulfillment(wh1_units, wh2_units, total_required) {
+    let available_units = wh1_units + wh2_units
+    if (available_units < total_required) {
+        print("Logistics Bottleneck: Insufficient combined inventory across regional hubs!")
+        return 0
+    }
+    print("Split warehouse consignment route planned successfully.")
+    return 1
+}
+
+function calculate_sales_tax_nexus_exemption(state_tax_code, resale_cert_valid) {
+    if (resale_cert_valid == 1) {
+        print("B2B Tax Exemption Applied: Valid state resale certificate on file.")
+        return 0
+    }
+    let applicable_rate = 7
+    if (state_tax_code == 36) {
+        let applicable_rate = 9
+    }
+    return applicable_rate
+}
+
+function audit_customer_lifetime_value_credit(order_count, total_lifetime_spent) {
+    let avg_order_value = total_lifetime_spent / order_count
+    print("Customer Analytics LTV Profile:")
+    print(avg_order_value)
+    if (avg_order_value > 2500) {
+        print("VIP Privilege: Complimentary premium concierge account manager assigned.")
+        return 1
+    }
+    return 0
+}
+
+function process_subscription_recurring_billing_cycle(plan_id, cycle_months) {
+    let monthly_fee = 29
+    if (plan_id == 2) {
+        let monthly_fee = 79
+    }
+    let recurring_invoice = monthly_fee * cycle_months
+    print("SaaS Software Enterprise Cloud Subscription Invoiced:")
+    print(recurring_invoice)
+    return recurring_invoice
+}
+
+function reconcile_daily_pos_settlement_ledger(t1, t2, t3, t4, t5) {
+    let daily_gross_takings = t1 + t2 + t3 + t4 + t5
+    print("========================================")
+    print("End-of-Day Point-of-Sale Register Reconciliation:")
+    print(daily_gross_takings)
+    print("========================================")
+    return daily_gross_takings
+}
+
+function process_order_items(base_price, quantity, coupon_code) {
+    let subtotal = calculate_item_subtotal(base_price, quantity)
+    let discount_percent = validate_coupon_code(coupon_code)
+
+    // Logic Flaw: Discount applied before checking customer tier authorization
+    let discount_amount = (subtotal * discount_percent) / 100
+    let discounted_subtotal = subtotal - discount_amount
+
+    // Volume rebate
+    let volume_rebate = calculate_bulk_order_rebate(quantity, discounted_subtotal)
+    let subtotal_after_rebate = discounted_subtotal - volume_rebate
+
+    // Calculate tax
+    let total_tax = (subtotal_after_rebate * tax_rate) / 100
+    let final_invoice_amount = subtotal_after_rebate + total_tax
+
+    print("Subtotal after discount:")
+    print(discounted_subtotal)
+    print("Subtotal after bulk volume rebate:")
+    print(subtotal_after_rebate)
+    print("Final invoice amount:")
+    print(final_invoice_amount)
+
+    // VULNERABILITY 2: Syntax Error — Missing closing brace on workflow verification block
+    // Notice: Missing closing brace '}' right here causes a delimiter imbalance (SEC-PAR-001)
+    if (final_invoice_amount < 0) {
+        print("Alert: Negative invoice detected! Potential refund exploit.")
+        return 0
+
+    return final_invoice_amount
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: E-Commerce Order Workflow ===")
+let unit_cost = 100
+let order_qty = 2
+let coupon = "VIP_DISCOUNT_50"
+
+let lock_res_1 = inventory_reservation_lock(801, order_qty)
+let freight_1 = calculate_shipping_freight_surcharge(5, 1)
+
+let tier_discount = audit_loyalty_membership_status(1007, 3)
+
+let gift_card_rem = gift_card_balance_redemption(500, 350)
+let gift_card_rem_2 = gift_card_balance_redemption(100, 450)
+
+let usd_val = convert_currency_to_usd(5000, currency_conversion_rate)
+let merchant_net = merchant_settlement_escrow_audit(100000, 5)
+let refund_credit = return_merchandise_authorization(1200, 10)
+
+let promo_discount = validate_tiered_promotional_code("MEGA_SPRING", 15)
+let points_balance_due = calculate_membership_points_redemption(2000, 500)
+let fraud_scan = verify_anti_fraud_transaction_velocity(2, 1)
+
+let min_order_fee = audit_minimum_order_value_surcharge(150, 200)
+let import_tariff = calculate_duty_customs_import_tariff(8471, 25000)
+let escrow_days = merchant_escrow_holding_period(1, 180)
+
+let carbon_fee = calculate_carbon_neutral_shipping_offset(450, 3)
+let chargeback_loss = audit_dispute_chargeback_liability(1200, 250)
+
+let batch_ok = validate_inventory_batch_serial(9042, 2028)
+let cold_fee = calculate_perishable_cold_chain_surcharge(1, 4)
+let affiliate_cut = audit_affiliate_referral_commission(3301, 45000)
+let split_wh = verify_split_shipment_fulfillment(45, 60, 100)
+let b2b_tax = calculate_sales_tax_nexus_exemption(36, 0)
+let ltv_vip = audit_customer_lifetime_value_credit(14, 48000)
+let saas_sub = process_subscription_recurring_billing_cycle(2, 12)
+let pos_reconcile = reconcile_daily_pos_settlement_ledger(1200, 3400, 5600, 7800, 9200)
+
+let invoice_result = process_order_items(unit_cost, order_qty, coupon)
+print("Order processing completed with invoice total:")
+print(invoice_result)

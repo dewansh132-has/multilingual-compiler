@@ -1,0 +1,23 @@
+వ్యాఖ్య తెలుగు: చరరాశి, గణితం, ముద్రణ, షరతు, లూప్
+అనుకో x = 10
+అనుకో y = 20
+అనుకో result = x కలుపు y
+
+రాయి("Sum is:")
+రాయి(result)
+
+ఒకవేళ (result కంటే_పెద్దది 25) {
+    రాయి("Greater than 25")
+}
+కాకపోతే {
+    రాయి("Not greater than 25")
+}
+
+అనుకో counter = 0
+అనుకో total = 0
+ఉన్నంతవరకు (counter కంటే_చిన్నది 5) {
+    అనుకో total = total కలుపు counter
+    అనుకో counter = counter కలుపు 1
+}
+రాయి("Loop total:")
+రాయి(total)

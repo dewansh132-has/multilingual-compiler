@@ -1,0 +1,511 @@
+// English practice program: fix the marked compiler errors, then run.
+let value_001 = 1
+let result_001 = value_001 + 1
+print(result_001)
+let value_002 = 2
+let result_002 = value_002 + 2
+print(result_002)
+let value_003 = 3
+let result_003 = value_003 + 3
+print(result_003)
+let value_004 = 4
+let result_004 = value_004 + 4
+print(result_004)
+let value_005 = 5
+let result_005 = value_005 + 5
+print(result_005)
+let value_006 = 6
+let result_006 = value_006 + 6
+print(result_006)
+let value_007 = 7
+let result_007 = value_007 + 7
+print(result_007)
+let value_008 = 8
+let result_008 = value_008 + 8
+print(result_008)
+let value_009 = 9
+let result_009 = value_009 + 9
+print(result_009)
+let value_010 = 10
+let result_010 = value_010 + 10
+print(result_010)
+let value_011 = 11
+let result_011 = value_011 + 11
+print(result_011)
+let value_012 = 12
+let result_012 = value_012 + 12
+print(result_012)
+let value_013 = 13
+let result_013 = value_013 + 13
+print(result_013)
+let value_014 = 14
+let result_014 = value_014 + 14
+print(result_014)
+let value_015 = 15
+let result_015 = value_015 + 15
+print(result_015)
+let value_016 = 16
+let result_016 = value_016 + 16
+print(result_016)
+let value_017 = 17
+let result_017 = value_017 + 17
+print(result_017)
+let value_018 = 18
+let result_018 = value_018 + 18
+print(result_018)
+let value_019 = 19
+let result_019 = value_019 + 19
+print(result_019)
+let value_020 = 20
+let result_020 = value_020 + 20
+print(result_020)
+let value_021 = 21
+let result_021 = value_021 + 21
+print(result_021)
+let value_022 = 22
+let result_022 = value_022 + 22
+print(result_022)
+let value_023 = 23
+let result_023 = value_023 + 23
+print(result_023)
+let value_024 = 24
+let result_024 = value_024 + 24
+print(result_024)
+let value_025 = 25
+let result_025 = value_025 + 25
+print(result_025)
+let value_026 = 26
+let result_026 = value_026 + 26
+print(result_026)
+let value_027 = 27
+let result_027 = value_027 + 27
+print(result_027)
+let value_028 = 28
+let result_028 = value_028 + 28
+print(result_028)
+let value_029 = 29
+let result_029 = value_029 + 29
+print(result_029)
+let value_030 = 30
+let result_030 = value_030 + 30
+print(result_030)
+let value_031 = 31
+let result_031 = value_031 + 31
+print(result_031)
+let value_032 = 32
+let result_032 = value_032 + 32
+print(result_032)
+let value_033 = 33
+let result_033 = value_033 + 33
+print(result_033)
+let value_034 = 34
+let result_034 = value_034 + 34
+print(result_034)
+let value_035 = 35
+let result_035 = value_035 + 35
+print(result_035)
+let value_036 = 36
+let result_036 = value_036 + 36
+print(result_036)
+let value_037 = 37
+let result_037 = value_037 + 37
+print(result_037
+let value_038 = 38
+let result_038 = value_038 + 38
+print(result_038)
+let value_039 = 39
+let result_039 = value_039 + 39
+print(result_039)
+let value_040 = 40
+let result_040 = value_040 + 40
+print(result_040)
+let value_041 = 41
+let result_041 = value_041 + 41
+print(result_041)
+let value_042 = 42
+let result_042 = value_042 + 42
+print(result_042)
+let value_043 = 43
+let result_043 = value_043 + 43
+print(result_043)
+let value_044 = 44
+let result_044 = value_044 + 44
+print(result_044)
+let value_045 = 45
+let result_045 = value_045 + 45
+print(result_045)
+let value_046 = 46
+let result_046 = value_046 + 46
+print(result_046)
+let value_047 = 47
+let result_047 = value_047 + 47
+print(result_047)
+let value_048 = 48
+let result_048 = value_048 + 48
+print(result_048)
+let value_049 = 49
+let result_049 = value_049 + 49
+print(result_049)
+let value_050 = 50
+let result_050 = value_050 + 50
+print(result_050)
+let value_051 = 51
+let result_051 = value_051 + 51
+print(result_051)
+let value_052 = 52
+let result_052 = value_052 + 52
+print(result_052)
+let value_053 = 53
+let result_053 = value_053 + 53
+print(result_053)
+let value_054 = 54
+let result_054 = value_054 + 54
+print(result_054)
+let value_055 = 55
+let result_055 = value_055 + 55
+print(result_055)
+let value_056 = 56
+let result_056 = value_056 + 56
+print(result_056)
+let value_057 = 57
+let result_057 = value_057 + 57
+print(result_057)
+let value_058 = 58
+let result_058 = value_058 + 58
+print(result_058)
+let value_059 = 59
+let result_059 = value_059 + 59
+print(result_059)
+let value_060 = 60
+let result_060 = value_060 + 60
+print(result_060)
+let value_061 = 61
+let result_061 = value_061 + 61
+print(result_061)
+let value_062 = 62
+let result_062 = value_062 + 62
+print(result_062)
+let value_063 = 63
+let result_063 = value_063 + 63
+print(result_063)
+let value_064 = 64
+let result_064 = value_064 + 64
+print(result_064)
+let value_065 = 65
+let result_065 = value_065 + 65
+print(result_065)
+let value_066 = 66
+let result_066 = value_066 + 66
+print(result_066)
+let value_067 = 67
+let result_067 = value_067 + 67
+print(result_067)
+let value_068 = 68
+let result_068 = value_068 + 68
+print(result_068)
+let value_069 = 69
+let result_069 = value_069 + 69
+print(result_069)
+let value_070 = 70
+let result_070 = value_070 + 70
+print(result_070)
+let value_071 = 71
+let result_071 = value_071 + 71
+print(result_071)
+let value_072 = 72
+let result_072 = value_072 + 72
+print(result_072)
+let value_073 = 73
+let result_073 = value_073 + 73
+print(result_073)
+let value_074 = 74
+let result_074 = value_074 + 74
+print(result_074)
+let value_075 = 75
+let result_075 = value_075 + 75
+print(result_075)
+let value_076 = 76
+let result_076 = value_076 + 76
+print(result_076)
+let value_077 = 77
+let result_077 = value_077 + 77
+print(result_077)
+let value_078 = 78
+let result_078 = value_078 + 78
+print(result_078)
+let value_079 = 79
+let result_079 = value_079 + 79
+print(result_079)
+let value_080 = 80
+let result_080 = value_080 + 80
+print(result_080)
+let value_081 = 81
+let result_081 = value_081 + 81
+print(result_081)
+let value_082 = 82
+let result_082 = value_082 + 82
+print(result_082)
+let value_083 = 83
+let result_083 = value_083 + 83
+print(result_083)
+let value_084 = 84
+let result_084 = value_084 + 84
+prnt(result_084)
+let value_085 = 85
+let result_085 = value_085 + 85
+print(result_085)
+let value_086 = 86
+let result_086 = value_086 + 86
+print(result_086)
+let value_087 = 87
+let result_087 = value_087 + 87
+print(result_087)
+let value_088 = 88
+let result_088 = value_088 + 88
+print(result_088)
+let value_089 = 89
+let result_089 = value_089 + 89
+print(result_089)
+let value_090 = 90
+let result_090 = value_090 + 90
+print(result_090)
+let value_091 = 91
+let result_091 = value_091 + 91
+print(result_091)
+let value_092 = 92
+let result_092 = value_092 + 92
+print(result_092)
+let value_093 = 93
+let result_093 = value_093 + 93
+print(result_093)
+let value_094 = 94
+let result_094 = value_094 + 94
+print(result_094)
+let value_095 = 95
+let result_095 = value_095 + 95
+print(result_095)
+let value_096 = 96
+let result_096 = value_096 + 96
+print(result_096)
+let value_097 = 97
+let result_097 = value_097 + 97
+print(result_097)
+let value_098 = 98
+let result_098 = value_098 + 98
+print(result_098)
+let value_099 = 99
+let result_099 = value_099 + 99
+print(result_099)
+let value_100 = 100
+let result_100 = value_100 + 100
+print(result_100)
+let value_101 = 101
+let result_101 = value_101 + 101
+print(result_101)
+let value_102 = 102
+let result_102 = value_102 + 102
+print(result_102)
+let value_103 = 103
+let result_103 = value_103 + 103
+print(result_103)
+let value_104 = 104
+let result_104 = value_104 + 104
+print(result_104)
+let value_105 = 105
+let result_105 = value_105 + 105
+print(result_105)
+let value_106 = 106
+let result_106 = value_106 + 106
+print(result_106)
+let value_107 = 107
+let result_107 = value_107 + 107
+print(result_107)
+let value_108 = 108
+let result_108 = value_108 + 108
+print(result_108)
+let value_109 = 109
+let result_109 = value_109 + 109
+print(result_109)
+let value_110 = 110
+let result_110 = value_110 + 110
+print(result_110)
+let value_111 = 111
+let result_111 = value_111 + 111
+print(result_111)
+let value_112 = 112
+let result_112 = value_112 + 112
+print(result_112
+let value_113 = 113
+let result_113 = value_113 + 113
+print(result_113)
+let value_114 = 114
+let result_114 = value_114 + 114
+print(result_114)
+let value_115 = 115
+let result_115 = value_115 + 115
+print(result_115)
+let value_116 = 116
+let result_116 = value_116 + 116
+print(result_116)
+let value_117 = 117
+let result_117 = value_117 + 117
+print(result_117)
+let value_118 = 118
+let result_118 = value_118 + 118
+print(result_118)
+let value_119 = 119
+let result_119 = value_119 + 119
+print(result_119)
+let value_120 = 120
+let result_120 = value_120 + 120
+print(result_120)
+let value_121 = 121
+let result_121 = value_121 + 121
+print(result_121)
+let value_122 = 122
+let result_122 = value_122 + 122
+print(result_122)
+let value_123 = 123
+let result_123 = value_123 + 123
+print(result_123)
+let value_124 = 124
+let result_124 = value_124 + 124
+print(result_124)
+let value_125 = 125
+let result_125 = value_125 + 125
+print(result_125)
+let value_126 = 126
+let result_126 = value_126 + 126
+print(result_126)
+let value_127 = 127
+let result_127 = value_127 + 127
+print(result_127)
+let value_128 = 128
+let result_128 = value_128 + 128
+print(result_128)
+let value_129 = 129
+let result_129 = value_129 + 129
+print(result_129)
+let value_130 = 130
+let result_130 = value_130 + 130
+print(result_130)
+let value_131 = 131
+let result_131 = value_131 + 131
+print(result_131)
+let value_132 = 132
+let result_132 = value_132 + 132
+print(result_132)
+let value_133 = 133
+let result_133 = value_133 + 133
+print(result_133)
+let value_134 = 134
+let result_134 = value_134 + 134
+print(result_134)
+let value_135 = 135
+let result_135 = value_135 + 135
+print(result_135)
+let value_136 = 136
+let result_136 = value_136 + 136
+print(result_136)
+let value_137 = 137
+let result_137 = value_137 + 137
+print(result_137)
+let value_138 = 138
+let result_138 = value_138 + 138
+print(result_138)
+let value_139 = 139
+let result_139 = value_139 + 139
+print(result_139)
+let value_140 = 140
+let result_140 = value_140 + 140
+print(result_140)
+let value_141 = 141
+let result_141 = value_141 + 141
+print(result_141)
+let value_142 = 142
+let result_142 = value_142 + 142
+print(result_142)
+let value_143 = 143
+let result_143 = value_143 + 143
+print(result_143)
+let value_144 = 144
+let result_144 = value_144 + 144
+print(result_144)
+let value_145 = 145
+let result_145 = value_145 + 145
+print(result_145)
+let value_146 = 146
+let result_146 = value_146 + 146
+print(result_146)
+let value_147 = 147
+let result_147 = value_147 + 147
+print(result_147)
+let value_148 = 148
+let result_148 = value_148 + 148
+print(result_148)
+let value_149 = 149
+let result_149 = value_149 + 149
+print(result_149)
+let value_150 = 150
+let result_150 = value_150 + 150
+print(result_150)
+let value_151 = 151
+let result_151 = value_151 + 151
+print(result_151)
+let value_152 = 152
+let result_152 = value_152 + 152
+print(result_152)
+let value_153 = 153
+let result_153 = value_153 + 153
+print(result_153)
+let value_154 = 154
+let result_154 = value_154 + 154
+print(result_154)
+let value_155 = 155
+let result_155 = value_155 + 155
+print(result_155)
+let value_156 = 156
+let result_156 = value_156 + 156
+print(result_156)
+let value_157 = 157
+let result_157 = value_157 + 157
+print(result_157)
+let value_158 = 158
+let result_158 = value_158 + 158
+print(result_158)
+let value_159 = 159
+let result_159 = value_159 + 159
+print(result_159)
+let value_160 = 160
+let result_160 = value_160 + 160
+print(result_160)
+let value_161 = 161
+let result_161 = value_161 + 161
+print(result_161)
+let value_162 = 162
+let result_162 = value_162 + 162
+print(result_162)
+let value_163 = 163
+let result_163 = value_163 + 163
+print(result_163)
+let value_164 = 164
+let result_164 = value_164 + 164
+print(result_164)
+let value_165 = 165
+let result_165 = value_165 + 165
+print(result_165)
+let value_166 = 166
+let result_166 = value_166 + 166
+print(result_166)
+let value_167 = 167
+let result_167 = value_167 + 167
+print(result_167)
+let value_168 = 168
+let result_168 = value_168 + 168
+print(result_168)
+let value_169 = 169
+let result_169 = value_169 + 169
+print(result_169)
+let value_170 = 170
+let result_170 = value_170 + 170
+print(result_170)

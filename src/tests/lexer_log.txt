@@ -1,0 +1,12 @@
+--- LEXICAL ANALYSIS REPORT ---
+
+Line 1: ['KEYWORD(#)', 'ID(Telugu)', 'ID(Bill)', 'ID(Calculator)']
+Line 2: ['KEYWORD()', 'ID(యూనిట్లు)', 'KEYWORD(=)', 'NUM(150)']
+Line 3: ['KEYWORD()', 'ID(ధర)', 'KEYWORD(=)', 'NUM(5)']
+Line 5: ['KEYWORD(if)', 'SYM(()', 'ID(యూనిట్లు)', 'KEYWORD(>)', 'NUM(100)', 'SYM())', 'SYM({)']
+Line 6: ['KEYWORD(print)', 'SYM(()', 'SYM(")', 'ID(డిస్కౌంట్)', 'ID(వర్తిస్తుంది)', 'SYM(!)', 'SYM(")', 'SYM())']
+Line 7: ['SYM(})', 'ID(లేకపోతే)', 'SYM({)']
+Line 8: ['KEYWORD(print)', 'SYM(()', 'SYM(")', 'ID(డిస్కౌంట్)', 'ID(లేదు)', 'SYM(.)', 'SYM(")', 'SYM())']
+Line 9: ['SYM(})']
+Line 11: ['KEYWORD()', 'ID(మొత్తం_బిల్లు)', 'KEYWORD(=)', 'ID(యూనిట్లు)', 'KEYWORD(*)', 'ID(ధర)']
+Line 12: ['KEYWORD(print)', 'SYM(()', 'ID(మొత్తం_బిల్లు)', 'SYM())']

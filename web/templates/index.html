@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>multilingual_compiler</title>
+  <meta name="description"
+    content="Modern browser-based IDE for the VITAL multilingual programming language compiler supporting English, Hindi, Telugu, Bengali, Marathi, and Nepali.">
+
+  <!-- Favicon placeholder to avoid 404 -->
+  <link rel="icon" href="data:,">
+
+  <!-- CodeMirror Stylesheet -->
+  <link rel="stylesheet" href="/static/vendor/codemirror.min.css">
+
+  <!-- Custom IDE Stylesheet -->
+  <link rel="stylesheet" href="/static/css/ide.css">
+</head>
+
+<body>
+  <div id="app-container">
+
+    <!-- HEADER -->
+    <header id="ide-header">
+      <div class="header-left">
+        <div class="app-logo">
+          <span>multilingual_compiler</span>
+        </div>
+      </div>
+
+      <div class="header-toolbar" id="toolbar-primary-group">
+        <div class="current-file-badge" id="header-file-badge" title="Active Language and Program Name">
+          <span class="lang-indicator-tag" id="current-lang-tag">English</span>
+          <span class="file-badge-separator">·</span>
+          <span id="current-filename-text">hello.vital</span>
+        </div>
+
+        <!-- RUN BUTTON -->
+        <button id="btn-run" class="btn btn-primary" title="Execute Pipeline (Ctrl + Enter)">
+          <span id="run-btn-icon">▶</span>
+          <span id="run-btn-text">Run</span>
+        </button>
+
+        <!-- CANCEL BUTTON (replaces Run during execution) -->
+        <button id="btn-cancel-run" class="btn btn-danger" title="Cancel Running Pipeline" style="display: none;">
+          <span id="cancel-btn-icon">⏹</span>
+          <span id="cancel-btn-text">Cancel</span>
+        </button>
+
+        <!-- NEW FILE BUTTON (beside Run) -->
+        <button id="btn-new" class="btn btn-secondary" title="Create new program (untitled.vital)">
+          <span>+ New</span>
+        </button>
+
+        <!-- STAGE 12 AI TOGGLE -->
+        <label class="ai-toggle-label toolbar-stage12-toggle" id="stage12-toggle-container"
+          title="Toggle Stage 12 AI Security Analysis (Gemini)">
+          <input type="checkbox" id="toggle-stage12-ai">
+          <span class="ai-toggle-slider"></span>
+          <span class="ai-toggle-text" style="font-size: 11px; white-space: nowrap;">AI Analysis (Stage 12)</span>
+        </label>
+        <!-- GEMINI AI STATUS INDICATOR -->
+        <div id="ai-status-indicator" class="ai-status-indicator" title="Gemini AI Status" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+          <span id="ai-pulse-dot" class="status-pulse-dot"></span>
+          <span id="ai-status-label" class="ai-status-label">Checking Gemini...</span>
+        </div>
+      </div>
+
+      <div class="header-right-spacer" aria-hidden="true"></div>
+    </header>
+
+    <!-- SECTION 11: LIVE COMPILER PIPELINE PROGRESS TRACKER -->
+    <section id="pipeline-progress-container" class="pipeline-progress-container"
+      aria-label="Compiler Pipeline Progress Tracker">
+      <div class="pipeline-progress-header">
+        <div class="pipeline-progress-title-group">
+          <span class="pipeline-tracker-icon">⚡</span>
+          <span class="pipeline-tracker-title">Compiler & Security Pipeline</span>
+          <span class="pipeline-status-badge badge-idle" id="pipeline-status-badge">Ready</span>
+        </div>
+        <div class="pipeline-metrics-group">
+          <span class="pipeline-metric" id="pipeline-metric-stage">Stage: Idle</span>
+          <span class="pipeline-metric-separator">•</span>
+          <span class="pipeline-metric" id="pipeline-metric-progress">0/14 Stages (0%)</span>
+          <span class="pipeline-metric-separator">•</span>
+          <span class="pipeline-metric" id="pipeline-metric-time">0.0 ms</span>
+        </div>
+        <!-- AI Fix & Re-run Action Controls in Pipeline Header -->
+        <div class="pipeline-header-actions" id="pipeline-header-actions"
+          style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+          <button id="btn-pipeline-ai-fix-rerun" class="btn btn-sm btn-pipeline-ai-fix-rerun"
+            style="display: none; background: #6366F1; color: #fff; font-weight: 600; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer;"
+            title="AI Fix &amp; Re-run: repair program stage by stage until pipeline passes">
+            <span class="fix-btn-icon">✨</span>
+            <span id="pipeline-ai-fix-rerun-text">AI Fix &amp; Re-run</span>
+          </button>
+          <button id="btn-pipeline-ai-fix-stop" class="btn btn-sm btn-danger"
+            style="display: none; font-weight: 600; padding: 4px 10px; border-radius: 4px; cursor: pointer;"
+            title="Stop AI Fix Loop">
+            <span>⏹ Stop</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- COMPACT PREFLIGHT STRIP -->
+      <div id="pipeline-preflight-strip" class="pipeline-preflight-strip" style="display: none;">
+        <span class="preflight-badge">PREFLIGHT</span>
+        <span class="preflight-message" id="pipeline-preflight-message">Preflight analysis ready.</span>
+        <span class="preflight-accuracy-tag" id="pipeline-preflight-accuracy" style="display: none;">Prediction matched
+          ✓</span>
+      </div>
+
+      <!-- Overall Progress Track Fill -->
+      <div class="pipeline-progress-track">
+        <div class="pipeline-progress-fill" id="pipeline-progress-fill" style="width: 0%;"></div>
+      </div>
+
+      <!-- Stepper Nodes (Horizontal Stepper on wide screens, responsive scrollable on narrow screens) -->
+      <div class="pipeline-stepper" id="pipeline-stepper" role="list">
+        <!-- 14 Canonical Stages populated by JavaScript -->
+      </div>
+    </section>
+
+    <!-- MAIN THREE-COLUMN WORKSPACE -->
+    <main id="ide-workspace">
+
+      <!-- LEFT: FILE EXPLORER -->
+      <aside id="panel-explorer" class="ide-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📁</span>
+            <span>Explorer</span>
+          </div>
+          <span class="tree-count-badge" id="total-demos-count">0 Demos</span>
+        </div>
+
+        <!-- Explorer View Tabs -->
+        <div class="explorer-tabs">
+          <button class="explorer-tab-btn active" id="tab-view-lang">By Language</button>
+          <button class="explorer-tab-btn" id="tab-view-folder">By Category</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="explorer-search-box">
+          <input type="text" id="demo-search-input" class="explorer-search-input" placeholder="Search demo programs...">
+        </div>
+
+        <!-- Demo Tree Container -->
+        <div id="demo-tree" class="explorer-tree">
+          <!-- Dynamically populated by ide.js -->
+        </div>
+      </aside>
+
+      <!-- RESIZER 1 -->
+      <div class="panel-resizer" id="resizer-left"></div>
+
+      <!-- CENTER: CODE EDITOR -->
+      <section id="panel-editor" class="ide-panel">
+        <!-- Editor Tab Bar -->
+        <div class="editor-tab-bar">
+          <div class="editor-tabs-group">
+            <div class="editor-tab active" id="editor-active-tab">
+              <span id="tab-file-icon">📄</span>
+              <span id="tab-filename">hello.vital</span>
+              <span class="editor-dirty-dot" id="tab-dirty-indicator" title="Unsaved changes"></span>
+            </div>
+            <!-- CODE HEALTH CHIP (Compact clickable status pill) -->
+            <button id="editor-health-chip" class="health-chip status-analysing" title="Code Health: Analysing..."
+              aria-label="Code Health Status Indicator" tabindex="0">
+              <span class="health-chip-icon" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M12 8a2 2 0 0 0-2 2c0 2 2 4 2 4s2-2 2-4a2 2 0 0 0-2-2z" fill="currentColor" />
+                </svg>
+              </span>
+              <span class="health-chip-title">Health</span>
+              <span class="health-chip-divider" aria-hidden="true">·</span>
+              <span class="health-chip-summary" id="health-chip-summary">
+                <span class="health-chip-dot" aria-hidden="true">●</span>
+                <span id="health-chip-details">Analysing...</span>
+              </span>
+            </button>
+          </div>
+          <div class="editor-actions-group">
+            <button id="btn-view-original" class="btn-tab-action"
+              title="View pristine original demo code from disk (Read-only)">
+              <span>👁️ View Original</span>
+            </button>
+            <button id="btn-restore-original" class="btn-tab-action"
+              title="Restore exact original vulnerable source into working buffer">
+              <span>⟲ Restore Original</span>
+            </button>
+            <button id="btn-undo-editor-fix" class="btn-tab-action" title="Undo the last applied security remediation"
+              disabled>
+              <span>↩ Undo Fix</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Breadcrumb Bar -->
+        <div class="editor-breadcrumb">
+          <span>Location:</span>
+          <span class="breadcrumb-lang" id="breadcrumb-lang">English</span>
+          <span>•</span>
+          <span id="breadcrumb-path">examples/english/hello.vital</span>
+        </div>
+
+        <!-- CodeMirror Editor Container -->
+        <div class="codemirror-wrapper">
+          <textarea id="code-editor"></textarea>
+        </div>
+      </section>
+
+      <!-- RESIZER 2 -->
+      <div class="panel-resizer" id="resizer-right"></div>
+
+      <!-- RIGHT: COMPILER & OUTPUT PANEL -->
+      <section id="panel-output" class="ide-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>⚙</span>
+            <span>Compiler Output & Pipeline</span>
+          </div>
+          <span id="output-timing-badge" class="tree-count-badge">0 ms</span>
+        </div>
+
+        <!-- Output Stage Tabs -->
+        <div class="output-tabs-bar" id="output-tabs-bar">
+          <button class="output-tab-btn active" data-tab="tab-out-health" id="tab-btn-health"
+            title="Pre-run Code Health analysis: syntax, semantics, dead code, metrics, and predicted pipeline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              style="vertical-align: -1px; margin-right: 4px;">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M12 8a2 2 0 0 0-2 2c0 2 2 4 2 4s2-2 2-4a2 2 0 0 0-2-2z" fill="currentColor" />
+            </svg>
+            <span>Code Health</span>
+          </button>
+          <button class="output-tab-btn" data-tab="tab-out-program" id="tab-btn-program">★ Output</button>
+          <button class="output-tab-btn" data-tab="tab-out-pipeline" id="tab-btn-pipeline">Pipeline Report</button>
+          <button class="output-tab-btn" data-tab="tab-out-lexer" style="display: none;">1. Lexer</button>
+          <button class="output-tab-btn" data-tab="tab-out-parser" style="display: none;">2. Parser</button>
+          <button class="output-tab-btn" data-tab="tab-out-ast" style="display: none;">3. AST</button>
+          <button class="output-tab-btn" data-tab="tab-out-ir" style="display: none;">4. IR (Python)</button>
+          <button class="output-tab-btn" data-tab="tab-out-symbol" style="display: none;">5. Symbol Table</button>
+          <button class="output-tab-btn" data-tab="tab-out-optimization" style="display: none;">6. Optimization</button>
+        </div>
+
+        <!-- Output Content Area -->
+        <div class="output-content-area" id="output-content-area">
+          <button id="btn-copy-output" class="copy-output-btn" title="Copy current output">Copy</button>
+
+          <!-- Tab 0: Code Health Pre-Run Analysis -->
+          <div class="output-tab-content active" id="tab-out-health">
+            <div class="health-panel" id="health-panel-container">
+
+              <!-- 1. Header Card: Score Ring & Metadata -->
+              <div class="health-header-card">
+                <div class="health-ring-wrapper">
+                  <svg class="health-score-ring" width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                    <circle class="health-ring-bg" cx="42" cy="42" r="34" stroke-width="7" fill="none" />
+                    <circle class="health-ring-fg" id="health-ring-circle" cx="42" cy="42" r="34" stroke-width="7"
+                      fill="none" stroke-dasharray="213.6" stroke-dashoffset="0" transform="rotate(-90 42 42)" />
+                  </svg>
+                  <div class="health-ring-center">
+                    <span class="health-ring-score" id="health-score-number">--</span>
+                    <span class="health-ring-grade" id="health-grade-letter">-</span>
+                  </div>
+                </div>
+                <div class="health-meta-col">
+                  <div class="health-status-row">
+                    <span class="health-status-badge status-healthy" id="health-status-text">HEALTHY</span>
+                    <button class="health-refresh-btn" id="btn-health-refresh" title="Re-analyze Code Health"
+                      aria-label="Re-analyze Code Health">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M23 4v6h-6M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="health-meta-info" id="health-meta-info">
+                    Analysed at <span id="health-analyzed-time">--:--:--</span> · hash <code
+                      id="health-hash-short">--------</code>
+                  </div>
+                  <div class="health-summary-line" id="health-summary-line">
+                    Initial static code health assessment.
+                  </div>
+                  <!-- Fix All Stage-Targeted Trigger & Delta -->
+                  <div class="health-fix-all-bar" id="health-fix-all-bar">
+                    <button class="btn btn-primary btn-sm btn-health-fix-all" id="btn-health-fix-all"
+                      style="display: none;"
+                      title="Fix all issues in deterministic order: Syntax → Semantic → Security">
+                      ⚡ Fix All Issues
+                    </button>
+                    <div class="health-fix-delta" id="health-fix-delta" style="display: none;">
+                      <span class="delta-label">Fix Delta:</span>
+                      <span class="delta-text" id="health-fix-delta-text"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Three Horizontal Stacked Bars -->
+              <div class="health-bars-section">
+                <!-- Insecure Bar -->
+                <div class="health-bar-row"
+                  title="Insecure Code %: Weighted percentage of executable code lines with security vulnerabilities or tainted sinks.">
+                  <div class="health-bar-labels">
+                    <span class="health-bar-title">Insecure Code</span>
+                    <span class="health-bar-value" id="health-val-insecure">0.0%</span>
+                  </div>
+                  <div class="health-bar-track">
+                    <div class="health-bar-fill fill-insecure" id="health-fill-insecure" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <!-- Dead Code Bar -->
+                <div class="health-bar-row"
+                  title="Dead Code %: Percentage of code lines identified as unused functions, unreachable statements, or dead branches.">
+                  <div class="health-bar-labels">
+                    <span class="health-bar-title">Dead Code</span>
+                    <span class="health-bar-value" id="health-val-deadcode">0.0%</span>
+                  </div>
+                  <div class="health-bar-track">
+                    <div class="health-bar-fill fill-deadcode" id="health-fill-deadcode" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <!-- Error Density Bar -->
+                <div class="health-bar-row"
+                  title="Error Density: Syntax, lexical, and semantic compiler errors normalized per 100 executable code lines.">
+                  <div class="health-bar-labels">
+                    <span class="health-bar-title">Error Density</span>
+                    <span class="health-bar-value" id="health-val-density">0.0 / 100 lines</span>
+                  </div>
+                  <div class="health-bar-track">
+                    <div class="health-bar-fill fill-density" id="health-fill-density" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Predicted Pipeline Strip -->
+              <div class="health-prediction-section">
+                <div class="health-section-heading">
+                  <span class="heading-text">Predicted Pipeline</span>
+                  <div class="heading-badges-row" style="display: flex; gap: 6px; align-items: center;">
+                    <span class="heading-badge">Prediction — run to confirm</span>
+                    <span class="health-accuracy-badge" id="health-accuracy-badge" style="display: none;">Prediction
+                      matched ✓</span>
+                  </div>
+                </div>
+                <div class="health-mini-pipeline" id="health-mini-pipeline" role="list">
+                  <!-- 10 mini stages: 1:Src, 2:Lex, 3:Par, 4:AST, 5:Sem, 6:Sym, 7:IR, 8:Opt, 9:Gen, 10:Val -->
+                </div>
+                <div class="health-prediction-verdict" id="health-prediction-verdict">
+                  <span class="verdict-icon" id="health-verdict-icon">ℹ️</span>
+                  <span class="verdict-text" id="health-verdict-text">Run compiler to confirm execution pipeline
+                    results.</span>
+                </div>
+              </div>
+
+              <!-- 4. Collapsible Diagnostic Sections -->
+              <div class="health-collapsible-group">
+                <!-- Errors Section -->
+                <details class="health-details" id="health-details-errors" open>
+                  <summary class="health-details-summary">
+                    <span class="summary-left">
+                      <span class="summary-caret">▶</span>
+                      <span class="summary-title">Compiler Errors</span>
+                    </span>
+                    <span class="summary-count badge-error" id="health-count-errors">0</span>
+                  </summary>
+                  <div class="health-details-content" id="health-list-errors">
+                    <div class="health-empty-msg">No syntax, lexical, or semantic errors found.</div>
+                  </div>
+                </details>
+
+                <!-- Dead Code Section -->
+                <details class="health-details" id="health-details-deadcode">
+                  <summary class="health-details-summary">
+                    <span class="summary-left">
+                      <span class="summary-caret">▶</span>
+                      <span class="summary-title">Dead Code Items</span>
+                    </span>
+                    <span class="summary-count badge-warning" id="health-count-deadcode">0</span>
+                  </summary>
+                  <div class="health-details-content" id="health-list-deadcode">
+                    <div class="health-empty-msg">No dead code or unused identifiers detected.</div>
+                  </div>
+                </details>
+
+                <!-- Security Findings Section -->
+                <details class="health-details" id="health-details-security" open>
+                  <summary class="health-details-summary">
+                    <span class="summary-left">
+                      <span class="summary-caret">▶</span>
+                      <span class="summary-title">Security Findings</span>
+                    </span>
+                    <span class="summary-count badge-security" id="health-count-security">0</span>
+                  </summary>
+                  <div class="health-details-content" id="health-list-security">
+                    <div class="health-empty-msg">No deterministic security vulnerabilities detected.</div>
+                  </div>
+                </details>
+              </div>
+
+              <!-- 5. Metrics Grid -->
+              <div class="health-metrics-section">
+                <div class="health-section-heading">
+                  <span class="heading-text">Code Metrics</span>
+                </div>
+                <div class="health-metrics-grid">
+                  <div class="health-metric-card" title="Total physical lines in the file">
+                    <span class="metric-label">Total Lines</span>
+                    <span class="metric-val" id="metric-total-lines">0</span>
+                  </div>
+                  <div class="health-metric-card" title="Lines containing executable code (non-blank, non-comment)">
+                    <span class="metric-label">Code Lines</span>
+                    <span class="metric-val" id="metric-code-lines">0</span>
+                  </div>
+                  <div class="health-metric-card" title="Lines with comments / documentation">
+                    <span class="metric-label">Comments</span>
+                    <span class="metric-val" id="metric-comment-lines">0</span>
+                  </div>
+                  <div class="health-metric-card" title="Total function declarations">
+                    <span class="metric-label">Functions</span>
+                    <span class="metric-val" id="metric-functions">0</span>
+                  </div>
+                  <div class="health-metric-card" title="Maximum control flow / block nesting depth">
+                    <span class="metric-label">Max Nesting</span>
+                    <span class="metric-val" id="metric-max-nesting">0</span>
+                  </div>
+                  <div class="health-metric-card" title="Cyclomatic complexity (Total / Maximum across functions)">
+                    <span class="metric-label">Complexity</span>
+                    <span class="metric-val" id="metric-complexity">0 / 0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 6. Unavailable / Error State -->
+              <div class="health-error-state" id="health-error-state" style="display: none;">
+                <div class="error-state-icon">⚠️</div>
+                <div class="error-state-title">Analysis Unavailable</div>
+                <div class="error-state-reason" id="health-error-reason">Could not connect to health analyzer.</div>
+                <button class="btn btn-secondary btn-sm" id="btn-health-retry"
+                  style="margin-top: 10px; cursor: pointer;">
+                  ↻ Retry Analysis
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Tab 1: Program Execution Output -->
+          <div class="output-tab-content" id="tab-out-program">
+            <!-- Waiting State (Shown when on Output tab before any run has been executed) -->
+            <div class="output-waiting-state" id="output-waiting-state">
+              <div class="waiting-state-card">
+                <div class="waiting-state-icon">⏳</div>
+                <div class="waiting-state-title">Compiler Artifacts Awaiting Completion</div>
+                <div class="waiting-state-message" id="output-waiting-message">Compiler artifacts will appear here after
+                  all
+                  required stages pass and the Final Report is generated.</div>
+                <div class="waiting-state-subtext" id="output-waiting-subtext">Click ▶ Run to start progressive stage
+                  execution. If a stage pauses for errors, click that stage's box above to review and apply fixes.</div>
+                <button id="btn-security-override-run" class="btn btn-danger"
+                  style="display: none; margin-top: 14px; background: #dc2626; color: #ffffff; font-weight: 600; padding: 8px 16px; border-radius: 4px; border: 1px solid #b91c1c; cursor: pointer;">
+                  ⚠ Run anyway (unsafe, sandbox only)
+                </button>
+              </div>
+            </div>
+            <div id="override-warning-banner" class="override-warning-banner"
+              style="display: none; background: #fef2f2; border: 2px solid #ef4444; color: #991b1b; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; font-weight: 700; font-size: 13px;">
+              ⚠️ EXECUTED WITH SECURITY OVERRIDE (dangerous operations were stubbed, not performed)
+            </div>
+            <div id="output-blocked-empty-state" class="output-blocked-empty-state"
+              style="display: none; padding: 24px; text-align: center; background: #0f172a; border-radius: 6px; margin: 10px 0; border: 1px dashed #ef4444;">
+              <div style="font-size: 26px; margin-bottom: 8px;">⛔</div>
+              <div id="output-blocked-title"
+                style="font-size: 14px; font-weight: 700; color: #f87171; margin-bottom: 6px;">No output generated.
+              </div>
+              <div id="output-blocked-reason"
+                style="font-size: 12px; color: #94a3b8; margin-bottom: 16px; line-height: 1.5; max-width: 600px; margin-left: auto; margin-right: auto;">
+                Execution was blocked at Stage 11 (Security Analysis).</div>
+              <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" id="btn-jump-blocked-findings" style="cursor: pointer;">🔍
+                  Inspect Stage Findings</button>
+                <button class="btn btn-secondary btn-sm" id="btn-jump-code-health" style="cursor: pointer;">🛡️ Code
+                  Health Panel</button>
+                <button class="btn btn-danger btn-sm" id="btn-blocked-override-run"
+                  style="display: none; background: #dc2626; color: #fff; cursor: pointer;">⚠ Run anyway (unsafe,
+                  sandbox only)</button>
+              </div>
+            </div>
+            <pre class="console-pre"
+              id="console-program-output">> System Ready. Select a demo or click ▶ Run to execute.</pre>
+          </div>
+
+          <!-- Tab 2: Full Aggregated Pipeline Report -->
+          <div class="output-tab-content" id="tab-out-pipeline">
+            <div id="pipeline-report-incomplete-banner" class="pipeline-report-incomplete-banner"
+              style="display: none; background: #451a03; border: 1px solid #f59e0b; color: #fef3c7; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; font-weight: 600; font-size: 12.5px;">
+              ⚠️ INCOMPLETE REPORT — Pipeline stopped at Stage N due to errors. Subsequent stages were blocked.
+            </div>
+            <div class="pipeline-report-actions-bar" id="pipeline-report-actions-bar"
+              style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" id="btn-export-report-html"
+                title="Export Final Report as HTML">📄 Export HTML</button>
+              <button class="btn btn-secondary btn-sm" id="btn-export-report-json"
+                title="Export Final Report as JSON">📦 Export JSON</button>
+              <button class="btn btn-primary btn-sm" id="btn-pipeline-save-corrected"
+                title="Save corrected code as a new file">💾 Save Corrected Code</button>
+              <button class="btn btn-secondary btn-sm" id="btn-pipeline-restore-original"
+                title="Restore original educational demo">↺ Restore Original</button>
+            </div>
+            <pre class="console-pre" id="console-pipeline-report">(Click Run to generate complete pipeline report)</pre>
+          </div>
+
+          <!-- Tab 3: Lexical Analysis Log -->
+          <div class="output-tab-content" id="tab-out-lexer">
+            <pre class="console-pre" id="console-lexer-log">(Lexer token stream will appear here)</pre>
+          </div>
+
+          <!-- Tab 4: Parser Validation Log -->
+          <div class="output-tab-content" id="tab-out-parser">
+            <pre class="console-pre" id="console-parser-log">(Parser validation report will appear here)</pre>
+          </div>
+
+          <!-- Tab 5: Visual AST Log -->
+          <div class="output-tab-content" id="tab-out-ast">
+            <pre class="console-pre" id="console-ast-log">(Visual AST hierarchy will appear here)</pre>
+          </div>
+
+          <!-- Tab 6: Transpiled IR (Python) -->
+          <div class="output-tab-content" id="tab-out-ir">
+            <pre class="console-pre" id="console-ir-code">(Transpiled Python intermediate code will appear here)</pre>
+          </div>
+
+          <!-- Tab 7: Semantic Symbol Table -->
+          <div class="output-tab-content" id="tab-out-symbol">
+            <pre class="console-pre" id="console-symbol-table">(Semantic symbol table will appear here)</pre>
+          </div>
+
+          <!-- Tab 7b: Mandatory IR Optimization Report -->
+          <div class="output-tab-content" id="tab-out-optimization">
+            <pre class="console-pre"
+              id="console-optimization-report">(Mandatory IR Optimization passes, transformations, and verification proof will appear here)</pre>
+          </div>
+
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- STATUS BAR -->
+    <footer id="ide-statusbar">
+      <div class="statusbar-left">
+        <span class="status-indicator-dot" id="status-indicator-dot"></span>
+        <span id="statusbar-text">Status: System Ready | Multilingual Engine Loaded</span>
+      </div>
+      <div class="statusbar-right">
+        <span id="statusbar-elapsed">0.0 ms</span>
+        <span id="statusbar-cursor">Ln 1, Col 1</span>
+        <span>UTF-8</span>
+        <span title="6 Languages: EN, HI, TE, BN, MR, NE">VITAL v2.0</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- User-Controlled Fix Review & Diff Modal -->
+  <div id="fix-modal-overlay" class="fix-modal-overlay" style="display: none;" role="dialog" aria-modal="true"
+    aria-labelledby="fix-modal-title">
+    <div class="fix-modal-card">
+      <div class="fix-modal-header">
+        <div class="fix-modal-title-group">
+          <span class="fix-modal-icon">✨</span>
+          <span class="fix-modal-title" id="fix-modal-title">Security Remediation Review</span>
+          <span class="fix-modal-badge" id="fix-modal-severity">Critical</span>
+          <span class="fix-modal-source-badge badge-local-rule" id="fix-modal-source">Local rule</span>
+          <span class="fix-modal-val-badge val-not-tested" id="fix-modal-validation">Not yet validated</span>
+        </div>
+        <button class="fix-modal-close" id="btn-close-fix-modal">✕</button>
+      </div>
+
+      <!-- Progressive AI Refinement Bar (Non-blocking) -->
+      <div id="fix-ai-refining-bar" class="fix-ai-refining-bar" style="display: none;">
+        <span class="ai-spin-icon">⏳</span>
+        <span id="fix-ai-refining-text">Gemini AI is refining this proposal in background...</span>
+      </div>
+
+      <div class="fix-modal-body">
+        <!-- Suspect Fix Warning Banner (Requirement 3) -->
+        <div id="fix-modal-suspect-warning" class="fix-modal-suspect-warning" style="display: none;">
+          <span class="suspect-icon">⚠️</span>
+          <span id="fix-modal-suspect-text" class="suspect-text">Warning: Suspect fix detected.</span>
+        </div>
+
+        <!-- Redesigned Per-Error Diff Container for Fix All -->
+        <div id="fix-modal-per-error-container" class="fix-modal-per-error-container" style="display: none;"></div>
+
+        <p class="fix-modal-desc" id="fix-modal-explanation">Explanation of proposed changes.</p>
+
+        <!-- Per-fix Results Panel (Task B & Task D: Inline, Non-blocking) -->
+        <div id="fix-modal-results-panel" class="fix-modal-results-panel" style="display: none;"></div>
+
+        <!-- View mode toggle: Unified Diff vs Split Before/After -->
+        <div class="diff-view-modes">
+          <button class="diff-mode-btn active" id="btn-mode-unified">Unified Diff</button>
+          <button class="diff-mode-btn" id="btn-mode-split">Before & After</button>
+        </div>
+
+        <div class="diff-container" id="diff-container-unified">
+          <div class="diff-header">
+            <span>Diff Preview (Red = Remove, Green = Add)</span>
+            <span class="diff-file-tag">editor buffer</span>
+          </div>
+          <pre class="diff-pre" id="fix-diff-preview"></pre>
+        </div>
+
+        <div class="diff-container-split" id="diff-container-split" style="display: none;">
+          <div class="split-col">
+            <div class="diff-header">
+              <span>Before (Current Working Buffer)</span>
+            </div>
+            <pre class="split-pre" id="fix-split-before"></pre>
+          </div>
+          <div class="split-col">
+            <div class="diff-header">
+              <span>After (Proposed Correction)</span>
+            </div>
+            <pre class="split-pre" id="fix-split-after"></pre>
+          </div>
+        </div>
+
+        <div class="fix-modal-guarantee">
+          <span>🛡️ <strong>Safety Guarantee:</strong> This fix modifies only the reviewed code in your editor buffer.
+            Disk demo files remain untouched. An undo snapshot will be saved.</span>
+        </div>
+      </div>
+      <div class="fix-modal-footer">
+        <button class="btn btn-secondary" id="btn-reject-fix">✕ Reject</button>
+        <button class="btn btn-secondary" id="btn-modal-view-original">👁️ View Original</button>
+        <button class="btn btn-secondary" id="btn-modal-undo-fix" style="display: none;">↩ Undo Fix</button>
+        <button class="btn btn-primary" id="btn-apply-fix">✓ Approve & Apply Fix</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Original Vulnerable Demo Viewer Modal -->
+  <div id="original-modal-overlay" class="fix-modal-overlay" style="display: none;" role="dialog" aria-modal="true"
+    aria-labelledby="original-modal-title">
+    <div class="fix-modal-card original-modal-card">
+      <div class="fix-modal-header">
+        <div class="fix-modal-title-group">
+          <span class="fix-modal-icon">🔒</span>
+          <span class="fix-modal-title" id="original-modal-title">Original Vulnerable Demo (Pristine Disk Source)</span>
+          <span class="fix-modal-source-badge badge-read-only">READ-ONLY DISK FIXTURE</span>
+        </div>
+        <button class="fix-modal-close" id="btn-close-original-modal">✕</button>
+      </div>
+      <div class="fix-modal-body">
+        <div class="original-modal-meta">
+          <span>Source File: <strong id="original-modal-path">examples/...</strong></span>
+          <span>•</span>
+          <span id="original-modal-status" style="color: var(--accent-emerald);">Verified Immutable</span>
+        </div>
+        <div class="diff-container">
+          <div class="diff-header">
+            <span>Pristine Disk Content (Unmodified)</span>
+            <span class="diff-file-tag">read-only fixture</span>
+          </div>
+          <pre class="diff-pre original-modal-code" id="original-modal-code"></pre>
+        </div>
+      </div>
+      <div class="fix-modal-footer">
+        <button class="btn btn-secondary" id="btn-dismiss-original-modal">Close</button>
+        <button class="btn btn-primary" id="btn-modal-restore-into-buffer">⟲ Restore This into Editor Buffer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE DETAILS MODAL OVERLAY (Floating Single-Scroll Dialog) -->
+  <div id="stage-overlay-backdrop" class="stage-overlay-backdrop pipeline-stage-drawer" style="display: none;"
+    role="dialog" aria-modal="true" aria-labelledby="drawer-stage-title">
+    <div class="stage-overlay-dialog" id="stage-overlay-dialog">
+      <div class="stage-overlay-header" id="stage-overlay-header">
+        <div class="drawer-title" id="drawer-stage-title">Stage Details</div>
+        <button class="drawer-close-btn" id="drawer-close-btn" title="Close Stage Details (Esc)">✕</button>
+      </div>
+      <div class="stage-overlay-scroll-body drawer-body" id="drawer-stage-body">
+        <!-- Single vertically scrollable content area containing all stage cards, findings, diffs, and actions -->
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Fix & Re-run Multi-Stage Progression Modal -->
+  <div id="ai-fix-rerun-modal-overlay" class="fix-modal-overlay" style="display: none;" role="dialog" aria-modal="true"
+    aria-labelledby="ai-fix-rerun-modal-title">
+    <div class="fix-modal-card" style="max-width: 800px; width: 90%;">
+      <div class="fix-modal-header">
+        <div class="fix-modal-title-group">
+          <span class="fix-modal-icon">✨</span>
+          <span class="fix-modal-title" id="ai-fix-rerun-modal-title">AI Fix &amp; Re-run</span>
+          <span class="fix-modal-badge" id="ai-fix-rerun-status-badge">In Progress</span>
+        </div>
+        <button class="fix-modal-close" id="btn-close-ai-fix-rerun-modal">✕</button>
+      </div>
+      <div class="fix-modal-body">
+        <div class="ai-fix-rerun-section">
+          <div
+            style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+            Live Iteration Progression
+          </div>
+          <div id="ai-fix-rerun-iteration-logs"
+            style="background: var(--bg-primary, #0D1117); border: 1px solid var(--border-color, #30363D); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; line-height: 1.6; max-height: 180px; overflow-y: auto; color: var(--text-primary, #C9D1D9);">
+          </div>
+        </div>
+
+        <div id="ai-fix-rerun-summary-section" style="display: none; margin-top: 16px;">
+          <div
+            style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+            Remediation Summary
+          </div>
+          <div id="ai-fix-rerun-stats-pills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+          </div>
+          <div id="ai-fix-rerun-suspect-banner" class="alert alert-warning"
+            style="display: none; background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 8px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 12px;">
+          </div>
+
+          <div
+            style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+            Whole Buffer Diff
+          </div>
+          <pre id="ai-fix-rerun-diff-pre"
+            style="background: var(--bg-primary, #0D1117); border: 1px solid var(--border-color, #30363D); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 11px; max-height: 250px; overflow: auto; color: var(--text-primary, #C9D1D9);"></pre>
+        </div>
+      </div>
+      <div class="fix-modal-footer">
+        <button class="btn btn-secondary" id="btn-ai-fix-rerun-undo" style="display: none;">↩ Undo Fix</button>
+        <button class="btn btn-success" id="btn-ai-fix-rerun-save" disabled>💾 Save Corrected Code</button>
+        <button class="btn btn-primary" id="btn-ai-fix-rerun-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CodeMirror Scripts (Vendored locally for offline reliability) -->
+  <script src="/static/vendor/codemirror.min.js"></script>
+  <script src="/static/vendor/matchbrackets.min.js"></script>
+  <script src="/static/vendor/closebrackets.min.js"></script>
+  <script src="/static/vendor/active-line.min.js"></script>
+
+  <!-- VITAL Language Highlighter -->
+  <script src="/static/js/vital-mode.js"></script>
+
+  <!-- IDE Core Logic -->
+  <script src="/static/js/ide.js"></script>
+</body>
+
+</html>

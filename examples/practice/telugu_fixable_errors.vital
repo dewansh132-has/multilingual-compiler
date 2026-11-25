@@ -1,0 +1,511 @@
+// తెలుగు practice program: fix the marked compiler errors, then run.
+అనుకో value_001 = 1
+అనుకో result_001 = value_001 కలుపు 1
+రాయి(result_001)
+అనుకో value_002 = 2
+అనుకో result_002 = value_002 కలుపు 2
+రాయి(result_002)
+అనుకో value_003 = 3
+అనుకో result_003 = value_003 కలుపు 3
+రాయి(result_003)
+అనుకో value_004 = 4
+అనుకో result_004 = value_004 కలుపు 4
+రాయి(result_004)
+అనుకో value_005 = 5
+అనుకో result_005 = value_005 కలుపు 5
+రాయి(result_005)
+అనుకో value_006 = 6
+అనుకో result_006 = value_006 కలుపు 6
+రాయి(result_006)
+అనుకో value_007 = 7
+అనుకో result_007 = value_007 కలుపు 7
+రాయి(result_007)
+అనుకో value_008 = 8
+అనుకో result_008 = value_008 కలుపు 8
+రాయి(result_008)
+అనుకో value_009 = 9
+అనుకో result_009 = value_009 కలుపు 9
+రాయి(result_009)
+అనుకో value_010 = 10
+అనుకో result_010 = value_010 కలుపు 10
+రాయి(result_010)
+అనుకో value_011 = 11
+అనుకో result_011 = value_011 కలుపు 11
+రాయి(result_011)
+అనుకో value_012 = 12
+అనుకో result_012 = value_012 కలుపు 12
+రాయి(result_012)
+అనుకో value_013 = 13
+అనుకో result_013 = value_013 కలుపు 13
+రాయి(result_013)
+అనుకో value_014 = 14
+అనుకో result_014 = value_014 కలుపు 14
+రాయి(result_014)
+అనుకో value_015 = 15
+అనుకో result_015 = value_015 కలుపు 15
+రాయి(result_015)
+అనుకో value_016 = 16
+అనుకో result_016 = value_016 కలుపు 16
+రాయి(result_016)
+అనుకో value_017 = 17
+అనుకో result_017 = value_017 కలుపు 17
+రాయి(result_017)
+అనుకో value_018 = 18
+అనుకో result_018 = value_018 కలుపు 18
+రాయి(result_018)
+అనుకో value_019 = 19
+అనుకో result_019 = value_019 కలుపు 19
+రాయి(result_019)
+అనుకో value_020 = 20
+అనుకో result_020 = value_020 కలుపు 20
+రాయి(result_020)
+అనుకో value_021 = 21
+అనుకో result_021 = value_021 కలుపు 21
+రాయి(result_021)
+అనుకో value_022 = 22
+అనుకో result_022 = value_022 కలుపు 22
+రాయి(result_022)
+అనుకో value_023 = 23
+అనుకో result_023 = value_023 కలుపు 23
+రాయి(result_023)
+అనుకో value_024 = 24
+అనుకో result_024 = value_024 కలుపు 24
+రాయి(result_024)
+అనుకో value_025 = 25
+అనుకో result_025 = value_025 కలుపు 25
+రాయి(result_025)
+అనుకో value_026 = 26
+అనుకో result_026 = value_026 కలుపు 26
+రాయి(result_026)
+అనుకో value_027 = 27
+అనుకో result_027 = value_027 కలుపు 27
+రాయి(result_027)
+అనుకో value_028 = 28
+అనుకో result_028 = value_028 కలుపు 28
+రాయి(result_028)
+అనుకో value_029 = 29
+అనుకో result_029 = value_029 కలుపు 29
+రాయి(result_029)
+అనుకో value_030 = 30
+అనుకో result_030 = value_030 కలుపు 30
+రాయి(result_030)
+అనుకో value_031 = 31
+అనుకో result_031 = value_031 కలుపు 31
+రాయి(result_031)
+అనుకో value_032 = 32
+అనుకో result_032 = value_032 కలుపు 32
+రాయి(result_032)
+అనుకో value_033 = 33
+అనుకో result_033 = value_033 కలుపు 33
+రాయి(result_033)
+అనుకో value_034 = 34
+అనుకో result_034 = value_034 కలుపు 34
+రాయి(result_034)
+అనుకో value_035 = 35
+అనుకో result_035 = value_035 కలుపు 35
+రాయి(result_035)
+అనుకో value_036 = 36
+అనుకో result_036 = value_036 కలుపు 36
+రాయి(result_036)
+అనుకో value_037 = 37
+అనుకో result_037 = value_037 కలుపు 37
+రాయి(result_037
+అనుకో value_038 = 38
+అనుకో result_038 = value_038 కలుపు 38
+రాయి(result_038)
+అనుకో value_039 = 39
+అనుకో result_039 = value_039 కలుపు 39
+రాయి(result_039)
+అనుకో value_040 = 40
+అనుకో result_040 = value_040 కలుపు 40
+రాయి(result_040)
+అనుకో value_041 = 41
+అనుకో result_041 = value_041 కలుపు 41
+రాయి(result_041)
+అనుకో value_042 = 42
+అనుకో result_042 = value_042 కలుపు 42
+రాయి(result_042)
+అనుకో value_043 = 43
+అనుకో result_043 = value_043 కలుపు 43
+రాయి(result_043)
+అనుకో value_044 = 44
+అనుకో result_044 = value_044 కలుపు 44
+రాయి(result_044)
+అనుకో value_045 = 45
+అనుకో result_045 = value_045 కలుపు 45
+రాయి(result_045)
+అనుకో value_046 = 46
+అనుకో result_046 = value_046 కలుపు 46
+రాయి(result_046)
+అనుకో value_047 = 47
+అనుకో result_047 = value_047 కలుపు 47
+రాయి(result_047)
+అనుకో value_048 = 48
+అనుకో result_048 = value_048 కలుపు 48
+రాయి(result_048)
+అనుకో value_049 = 49
+అనుకో result_049 = value_049 కలుపు 49
+రాయి(result_049)
+అనుకో value_050 = 50
+అనుకో result_050 = value_050 కలుపు 50
+రాయి(result_050)
+అనుకో value_051 = 51
+అనుకో result_051 = value_051 కలుపు 51
+రాయి(result_051)
+అనుకో value_052 = 52
+అనుకో result_052 = value_052 కలుపు 52
+రాయి(result_052)
+అనుకో value_053 = 53
+అనుకో result_053 = value_053 కలుపు 53
+రాయి(result_053)
+అనుకో value_054 = 54
+అనుకో result_054 = value_054 కలుపు 54
+రాయి(result_054)
+అనుకో value_055 = 55
+అనుకో result_055 = value_055 కలుపు 55
+రాయి(result_055)
+అనుకో value_056 = 56
+అనుకో result_056 = value_056 కలుపు 56
+రాయి(result_056)
+అనుకో value_057 = 57
+అనుకో result_057 = value_057 కలుపు 57
+రాయి(result_057)
+అనుకో value_058 = 58
+అనుకో result_058 = value_058 కలుపు 58
+రాయి(result_058)
+అనుకో value_059 = 59
+అనుకో result_059 = value_059 కలుపు 59
+రాయి(result_059)
+అనుకో value_060 = 60
+అనుకో result_060 = value_060 కలుపు 60
+రాయి(result_060)
+అనుకో value_061 = 61
+అనుకో result_061 = value_061 కలుపు 61
+రాయి(result_061)
+అనుకో value_062 = 62
+అనుకో result_062 = value_062 కలుపు 62
+రాయి(result_062)
+అనుకో value_063 = 63
+అనుకో result_063 = value_063 కలుపు 63
+రాయి(result_063)
+అనుకో value_064 = 64
+అనుకో result_064 = value_064 కలుపు 64
+రాయి(result_064)
+అనుకో value_065 = 65
+అనుకో result_065 = value_065 కలుపు 65
+రాయి(result_065)
+అనుకో value_066 = 66
+అనుకో result_066 = value_066 కలుపు 66
+రాయి(result_066)
+అనుకో value_067 = 67
+అనుకో result_067 = value_067 కలుపు 67
+రాయి(result_067)
+అనుకో value_068 = 68
+అనుకో result_068 = value_068 కలుపు 68
+రాయి(result_068)
+అనుకో value_069 = 69
+అనుకో result_069 = value_069 కలుపు 69
+రాయి(result_069)
+అనుకో value_070 = 70
+అనుకో result_070 = value_070 కలుపు 70
+రాయి(result_070)
+అనుకో value_071 = 71
+అనుకో result_071 = value_071 కలుపు 71
+రాయి(result_071)
+అనుకో value_072 = 72
+అనుకో result_072 = value_072 కలుపు 72
+రాయి(result_072)
+అనుకో value_073 = 73
+అనుకో result_073 = value_073 కలుపు 73
+రాయి(result_073)
+అనుకో value_074 = 74
+అనుకో result_074 = value_074 కలుపు 74
+రాయి(result_074)
+అనుకో value_075 = 75
+అనుకో result_075 = value_075 కలుపు 75
+రాయి(result_075)
+అనుకో value_076 = 76
+అనుకో result_076 = value_076 కలుపు 76
+రాయి(result_076)
+అనుకో value_077 = 77
+అనుకో result_077 = value_077 కలుపు 77
+రాయి(result_077)
+అనుకో value_078 = 78
+అనుకో result_078 = value_078 కలుపు 78
+రాయి(result_078)
+అనుకో value_079 = 79
+అనుకో result_079 = value_079 కలుపు 79
+రాయి(result_079)
+అనుకో value_080 = 80
+అనుకో result_080 = value_080 కలుపు 80
+రాయి(result_080)
+అనుకో value_081 = 81
+అనుకో result_081 = value_081 కలుపు 81
+రాయి(result_081)
+అనుకో value_082 = 82
+అనుకో result_082 = value_082 కలుపు 82
+రాయి(result_082)
+అనుకో value_083 = 83
+అనుకో result_083 = value_083 కలుపు 83
+రాయి(result_083)
+అనుకో value_084 = 84
+అనుకో result_084 = value_084 కలుపు 84
+రాయ(result_084)
+అనుకో value_085 = 85
+అనుకో result_085 = value_085 కలుపు 85
+రాయి(result_085)
+అనుకో value_086 = 86
+అనుకో result_086 = value_086 కలుపు 86
+రాయి(result_086)
+అనుకో value_087 = 87
+అనుకో result_087 = value_087 కలుపు 87
+రాయి(result_087)
+అనుకో value_088 = 88
+అనుకో result_088 = value_088 కలుపు 88
+రాయి(result_088)
+అనుకో value_089 = 89
+అనుకో result_089 = value_089 కలుపు 89
+రాయి(result_089)
+అనుకో value_090 = 90
+అనుకో result_090 = value_090 కలుపు 90
+రాయి(result_090)
+అనుకో value_091 = 91
+అనుకో result_091 = value_091 కలుపు 91
+రాయి(result_091)
+అనుకో value_092 = 92
+అనుకో result_092 = value_092 కలుపు 92
+రాయి(result_092)
+అనుకో value_093 = 93
+అనుకో result_093 = value_093 కలుపు 93
+రాయి(result_093)
+అనుకో value_094 = 94
+అనుకో result_094 = value_094 కలుపు 94
+రాయి(result_094)
+అనుకో value_095 = 95
+అనుకో result_095 = value_095 కలుపు 95
+రాయి(result_095)
+అనుకో value_096 = 96
+అనుకో result_096 = value_096 కలుపు 96
+రాయి(result_096)
+అనుకో value_097 = 97
+అనుకో result_097 = value_097 కలుపు 97
+రాయి(result_097)
+అనుకో value_098 = 98
+అనుకో result_098 = value_098 కలుపు 98
+రాయి(result_098)
+అనుకో value_099 = 99
+అనుకో result_099 = value_099 కలుపు 99
+రాయి(result_099)
+అనుకో value_100 = 100
+అనుకో result_100 = value_100 కలుపు 100
+రాయి(result_100)
+అనుకో value_101 = 101
+అనుకో result_101 = value_101 కలుపు 101
+రాయి(result_101)
+అనుకో value_102 = 102
+అనుకో result_102 = value_102 కలుపు 102
+రాయి(result_102)
+అనుకో value_103 = 103
+అనుకో result_103 = value_103 కలుపు 103
+రాయి(result_103)
+అనుకో value_104 = 104
+అనుకో result_104 = value_104 కలుపు 104
+రాయి(result_104)
+అనుకో value_105 = 105
+అనుకో result_105 = value_105 కలుపు 105
+రాయి(result_105)
+అనుకో value_106 = 106
+అనుకో result_106 = value_106 కలుపు 106
+రాయి(result_106)
+అనుకో value_107 = 107
+అనుకో result_107 = value_107 కలుపు 107
+రాయి(result_107)
+అనుకో value_108 = 108
+అనుకో result_108 = value_108 కలుపు 108
+రాయి(result_108)
+అనుకో value_109 = 109
+అనుకో result_109 = value_109 కలుపు 109
+రాయి(result_109)
+అనుకో value_110 = 110
+అనుకో result_110 = value_110 కలుపు 110
+రాయి(result_110)
+అనుకో value_111 = 111
+అనుకో result_111 = value_111 కలుపు 111
+రాయి(result_111)
+అనుకో value_112 = 112
+అనుకో result_112 = value_112 కలుపు 112
+రాయి(result_112
+అనుకో value_113 = 113
+అనుకో result_113 = value_113 కలుపు 113
+రాయి(result_113)
+అనుకో value_114 = 114
+అనుకో result_114 = value_114 కలుపు 114
+రాయి(result_114)
+అనుకో value_115 = 115
+అనుకో result_115 = value_115 కలుపు 115
+రాయి(result_115)
+అనుకో value_116 = 116
+అనుకో result_116 = value_116 కలుపు 116
+రాయి(result_116)
+అనుకో value_117 = 117
+అనుకో result_117 = value_117 కలుపు 117
+రాయి(result_117)
+అనుకో value_118 = 118
+అనుకో result_118 = value_118 కలుపు 118
+రాయి(result_118)
+అనుకో value_119 = 119
+అనుకో result_119 = value_119 కలుపు 119
+రాయి(result_119)
+అనుకో value_120 = 120
+అనుకో result_120 = value_120 కలుపు 120
+రాయి(result_120)
+అనుకో value_121 = 121
+అనుకో result_121 = value_121 కలుపు 121
+రాయి(result_121)
+అనుకో value_122 = 122
+అనుకో result_122 = value_122 కలుపు 122
+రాయి(result_122)
+అనుకో value_123 = 123
+అనుకో result_123 = value_123 కలుపు 123
+రాయి(result_123)
+అనుకో value_124 = 124
+అనుకో result_124 = value_124 కలుపు 124
+రాయి(result_124)
+అనుకో value_125 = 125
+అనుకో result_125 = value_125 కలుపు 125
+రాయి(result_125)
+అనుకో value_126 = 126
+అనుకో result_126 = value_126 కలుపు 126
+రాయి(result_126)
+అనుకో value_127 = 127
+అనుకో result_127 = value_127 కలుపు 127
+రాయి(result_127)
+అనుకో value_128 = 128
+అనుకో result_128 = value_128 కలుపు 128
+రాయి(result_128)
+అనుకో value_129 = 129
+అనుకో result_129 = value_129 కలుపు 129
+రాయి(result_129)
+అనుకో value_130 = 130
+అనుకో result_130 = value_130 కలుపు 130
+రాయి(result_130)
+అనుకో value_131 = 131
+అనుకో result_131 = value_131 కలుపు 131
+రాయి(result_131)
+అనుకో value_132 = 132
+అనుకో result_132 = value_132 కలుపు 132
+రాయి(result_132)
+అనుకో value_133 = 133
+అనుకో result_133 = value_133 కలుపు 133
+రాయి(result_133)
+అనుకో value_134 = 134
+అనుకో result_134 = value_134 కలుపు 134
+రాయి(result_134)
+అనుకో value_135 = 135
+అనుకో result_135 = value_135 కలుపు 135
+రాయి(result_135)
+అనుకో value_136 = 136
+అనుకో result_136 = value_136 కలుపు 136
+రాయి(result_136)
+అనుకో value_137 = 137
+అనుకో result_137 = value_137 కలుపు 137
+రాయి(result_137)
+అనుకో value_138 = 138
+అనుకో result_138 = value_138 కలుపు 138
+రాయి(result_138)
+అనుకో value_139 = 139
+అనుకో result_139 = value_139 కలుపు 139
+రాయి(result_139)
+అనుకో value_140 = 140
+అనుకో result_140 = value_140 కలుపు 140
+రాయి(result_140)
+అనుకో value_141 = 141
+అనుకో result_141 = value_141 కలుపు 141
+రాయి(result_141)
+అనుకో value_142 = 142
+అనుకో result_142 = value_142 కలుపు 142
+రాయి(result_142)
+అనుకో value_143 = 143
+అనుకో result_143 = value_143 కలుపు 143
+రాయి(result_143)
+అనుకో value_144 = 144
+అనుకో result_144 = value_144 కలుపు 144
+రాయి(result_144)
+అనుకో value_145 = 145
+అనుకో result_145 = value_145 కలుపు 145
+రాయి(result_145)
+అనుకో value_146 = 146
+అనుకో result_146 = value_146 కలుపు 146
+రాయి(result_146)
+అనుకో value_147 = 147
+అనుకో result_147 = value_147 కలుపు 147
+రాయి(result_147)
+అనుకో value_148 = 148
+అనుకో result_148 = value_148 కలుపు 148
+రాయి(result_148)
+అనుకో value_149 = 149
+అనుకో result_149 = value_149 కలుపు 149
+రాయి(result_149)
+అనుకో value_150 = 150
+అనుకో result_150 = value_150 కలుపు 150
+రాయి(result_150)
+అనుకో value_151 = 151
+అనుకో result_151 = value_151 కలుపు 151
+రాయి(result_151)
+అనుకో value_152 = 152
+అనుకో result_152 = value_152 కలుపు 152
+రాయి(result_152)
+అనుకో value_153 = 153
+అనుకో result_153 = value_153 కలుపు 153
+రాయి(result_153)
+అనుకో value_154 = 154
+అనుకో result_154 = value_154 కలుపు 154
+రాయి(result_154)
+అనుకో value_155 = 155
+అనుకో result_155 = value_155 కలుపు 155
+రాయి(result_155)
+అనుకో value_156 = 156
+అనుకో result_156 = value_156 కలుపు 156
+రాయి(result_156)
+అనుకో value_157 = 157
+అనుకో result_157 = value_157 కలుపు 157
+రాయి(result_157)
+అనుకో value_158 = 158
+అనుకో result_158 = value_158 కలుపు 158
+రాయి(result_158)
+అనుకో value_159 = 159
+అనుకో result_159 = value_159 కలుపు 159
+రాయి(result_159)
+అనుకో value_160 = 160
+అనుకో result_160 = value_160 కలుపు 160
+రాయి(result_160)
+అనుకో value_161 = 161
+అనుకో result_161 = value_161 కలుపు 161
+రాయి(result_161)
+అనుకో value_162 = 162
+అనుకో result_162 = value_162 కలుపు 162
+రాయి(result_162)
+అనుకో value_163 = 163
+అనుకో result_163 = value_163 కలుపు 163
+రాయి(result_163)
+అనుకో value_164 = 164
+అనుకో result_164 = value_164 కలుపు 164
+రాయి(result_164)
+అనుకో value_165 = 165
+అనుకో result_165 = value_165 కలుపు 165
+రాయి(result_165)
+అనుకో value_166 = 166
+అనుకో result_166 = value_166 కలుపు 166
+రాయి(result_166)
+అనుకో value_167 = 167
+అనుకో result_167 = value_167 కలుపు 167
+రాయి(result_167)
+అనుకో value_168 = 168
+అనుకో result_168 = value_168 కలుపు 168
+రాయి(result_168)
+అనుకో value_169 = 169
+అనుకో result_169 = value_169 కలుపు 169
+రాయి(result_169)
+అనుకో value_170 = 170
+అనుకో result_170 = value_170 కలుపు 170
+రాయి(result_170)

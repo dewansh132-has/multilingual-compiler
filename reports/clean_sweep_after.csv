@@ -1,0 +1,46 @@
+language,file,category,final status,stage,severity,rule code,line:col,message,flagged text,codepoints (U+XXXX) of flagged chars,full original line
+Bengali,examples/bengali/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/ecommerce_order_processor.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/hospital_patient_registry.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Bengali,examples/bengali/sorting_algorithms_benchmark.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/graph_shortest_path.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/inventory_management_system.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+English,examples/english/student_grade_report.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Multilingual Fusion,examples/fusion/fusion_autonomous_robot.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Multilingual Fusion,examples/fusion/fusion_data_pipeline.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Multilingual Fusion,examples/fusion/fusion_stock_exchange.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/bank_ledger_system.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/library_catalog_system.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Hindi,examples/hindi/matrix_operations_suite.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/cryptography_cipher_toolkit.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/payroll_tax_calculator.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Marathi,examples/marathi/smart_energy_meter.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/financial_investment_portfolio.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/flight_reservation_system.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Nepali,examples/nepali/weather_station_analytics.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/arithmetic.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/conditions.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/hello.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/loops.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/task_scheduler_engine.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/text_statistics_analyzer.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-
+Telugu,examples/telugu/warehouse_logistics_tracker.vital,Canonical Examples,COMPLETED,NONE,CLEAN,CLEAN,-:-,Clean — Zero diagnostics across all stages & code health,-,-,-

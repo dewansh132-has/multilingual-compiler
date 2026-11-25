@@ -1,0 +1,23 @@
+टिप्पणी हिंदी: चर, गणित, छपाई, शर्त, लूप
+मानो x = 10
+मानो y = 20
+मानो result = x जोड़ y
+
+लिखो("Sum is:")
+लिखो(result)
+
+अगर (result से_बड़ा 25) {
+    लिखो("Greater than 25")
+}
+अन्यथा {
+    लिखो("Not greater than 25")
+}
+
+मानो counter = 0
+मानो total = 0
+जबतक (counter से_छोटा 5) {
+    मानो total = total जोड़ counter
+    मानो counter = counter जोड़ 1
+}
+लिखो("Loop total:")
+लिखो(total)

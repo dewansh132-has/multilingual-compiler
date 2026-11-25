@@ -1,0 +1,84 @@
+--- ABSTRACT SYNTAX TREE (VISUAL) ---
+
+Module (Root)
+├── Assign
+│   ├── Name (id='units')
+│   │   └── Store
+│   └── Constant (value=150)
+├── Assign
+│   ├── Name (id='charge')
+│   │   └── Store
+│   └── Constant (value=50)
+├── Assign
+│   ├── Name (id='rate')
+│   │   └── Store
+│   └── Constant (value=5)
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='--- Bill Generation ---')
+├── Assign
+│   ├── Name (id='total')
+│   │   └── Store
+│   └── BinOp
+│       ├── Name (id='charge')
+│       │   └── Load
+│       ├── Add
+│       └── BinOp
+│           ├── Name (id='units')
+│           │   └── Load
+│           ├── Mult
+│           └── Name (id='rate')
+│               └── Load
+├── Assign
+│   ├── Name (id='discount')
+│   │   └── Store
+│   └── Constant (value=0)
+├── If
+│   ├── Compare
+│   │   ├── Name (id='units')
+│   │   │   └── Load
+│   │   ├── Gt
+│   │   └── Constant (value=100)
+│   ├── Expr
+│   │   └── Call
+│   │       ├── Name (id='print')
+│   │       │   └── Load
+│   │       └── Constant (value='Discount Applied!')
+│   ├── Assign
+│   │   ├── Name (id='discount')
+│   │   │   └── Store
+│   │   └── BinOp
+│   │       ├── BinOp
+│   │       │   ├── Name (id='total')
+│   │       │   │   └── Load
+│   │       │   ├── Mult
+│   │       │   └── Constant (value=10)
+│   │       ├── Div
+│   │       └── Constant (value=100)
+│   └── Expr
+│       └── Call
+│           ├── Name (id='print')
+│           │   └── Load
+│           └── Constant (value='No Discount.')
+├── Assign
+│   ├── Name (id='final_bill')
+│   │   └── Store
+│   └── BinOp
+│       ├── Name (id='total')
+│       │   └── Load
+│       ├── Sub
+│       └── Name (id='discount')
+│           └── Load
+├── Expr
+│   └── Call
+│       ├── Name (id='print')
+│       │   └── Load
+│       └── Constant (value='Final Bill :')
+└── Expr
+    └── Call
+        ├── Name (id='print')
+        │   └── Load
+        └── Name (id='final_bill')
+            └── Load

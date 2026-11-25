@@ -1,0 +1,314 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo B: Unsafe Data Processing & Configuration
+// Language: English
+// Difficulty: Advanced
+// Seeded Defects: Hardcoded Secret (CWE-798), Info Disclosure (CWE-200), Missing Bounds (CWE-129), Path Traversal (CWE-22)
+
+// VULNERABILITY 1: Hardcoded Master Secret Key in source code (CWE-798)
+let admin_secret_key = "sk_live_sec_prod_9948271630_super_admin"
+let backup_encryption_salt = "static_salt_do_not_leak_99182"
+let database_master_password = "SuperRootMasterSecretPassword#2026"
+let debug_mode_enabled = 1
+let max_config_cache_size = 5
+
+function read_config_record(record_index, user_role) {
+    print("Reading configuration record index:")
+    print(record_index)
+
+    // Boundary check allows negative rejected
+    if (record_index < 0) {
+        print("Error: Negative index rejected.")
+        return 0
+    }
+
+    // VULNERABILITY 2: Off-by-one check allows out-of-range index 5 (CWE-129)
+    // Valid indices for 5-element buffer are 0..4. Checking > 5 accepts index 5!
+    if (record_index > 5) {
+        print("Error: Index exceeds max allocation buffer.")
+        return 0
+    }
+
+    // Simulated configuration lookup
+    let record_value = 100 + (record_index * 25)
+
+    // VULNERABILITY 3: Information Disclosure / Sensitive Data Exposure (CWE-200)
+    // Verbose debug logging leaks administrative secret keys into output console
+    if (debug_mode_enabled == 1) {
+        print("DEBUG LOG [INTERNAL]: Active Master Secret Key:")
+        print(admin_secret_key)
+        print("DEBUG LOG [INTERNAL]: User Role Context:")
+        print(user_role)
+    }
+
+    return record_value
+}
+
+function parse_user_payload(raw_count, max_allowed) {
+    let accumulator = 0
+    let counter = 0
+
+    // VULNERABILITY 4: Loop condition uses <= instead of < causing off-by-one extra cycle (CWE-129)
+    while (counter <= raw_count) {
+        accumulator = accumulator + counter
+        counter = counter + 1
+    }
+
+    print("Calculated payload checksum:")
+    print(accumulator)
+    return accumulator
+}
+
+function load_system_template_file(template_filename) {
+    // VULNERABILITY 5: Path Traversal in File Load (CWE-22)
+    // Directly concatenates unvalidated filename with base path
+    let base_template_dir = "/var/vital/templates/"
+    let resolved_path = base_template_dir + template_filename
+    print("Attempting to load configuration template from resolved filesystem path:")
+    print(resolved_path)
+    return resolved_path
+}
+
+function validate_jwt_signature_insecure(token_header, token_payload, secret) {
+    // Logic Flaw: Missing signature verification when header algorithm is 'none'
+    if (token_header == "none") {
+        print("Security Alert: Unsigned JWT token accepted via 'none' algorithm bypass!")
+        return 1
+    }
+    if (secret == admin_secret_key) {
+        return 1
+    }
+    return 0
+}
+
+function query_server_environment_parameter(param_id) {
+    if (param_id == 1) {
+        return 8080
+    } elif (param_id == 2) {
+        return 443
+    } elif (param_id == 3) {
+        return 3306
+    } else {
+        return 22
+    }
+}
+
+function compute_cache_slot_index(key_hash, table_size) {
+    if (table_size <= 0) {
+        return 0
+    }
+    let slot = key_hash - ((key_hash / table_size) * table_size)
+    print("Hash Table Bucket Mapped Index:")
+    print(slot)
+    return slot
+}
+
+function serialize_session_credentials(user_id, token, secret_salt) {
+    print("Serializing session state credentials buffer...")
+    let session_blob = (user_id * 1000) + secret_salt
+    print("Generated serialized authentication blob:")
+    print(session_blob)
+    return session_blob
+}
+
+function verify_rate_limit_token_bucket(tokens_remaining, request_cost) {
+    if (tokens_remaining < request_cost) {
+        print("HTTP 429: Rate limit exceeded. Too many requests.")
+        return 0
+    }
+    let new_tokens = tokens_remaining - request_cost
+    print("Tokens Remaining in Bucket:")
+    print(new_tokens)
+    return new_tokens
+}
+
+function read_telemetry_metric_slice(slice_index) {
+    // Off-by-one bounds flaw in telemetry slice lookup
+    if (slice_index > 5) {
+        print("Telemetry Slice Index out of bounds.")
+        return 0
+    }
+    let reading = slice_index * 150
+    return reading
+}
+
+function inspect_database_connection_pool(active_conns, max_conns) {
+    let available = max_conns - active_conns
+    print("Database Connection Pool Diagnostics:")
+    print("Active connections count:")
+    print(active_conns)
+    print("Available connection slots:")
+    print(available)
+    if (available <= 0) {
+        print("Warning: Connection pool exhaustion risk!")
+        return 0
+    }
+    return available
+}
+
+function execute_data_cleanup_routine(retention_days, dry_run_mode) {
+    if (dry_run_mode == 1) {
+        print("Data cleanup dry run mode active. No records deleted.")
+        return 0
+    }
+    print("Executing automated database pruning for records older than days:")
+    print(retention_days)
+    return 1
+}
+
+function validate_tls_cipher_suite(cipher_id) {
+    if (cipher_id == 1) {
+        print("Cipher Suite: TLS_AES_256_GCM_SHA384 (Approved Modern Cipher).")
+        return 1
+    } elif (cipher_id == 2) {
+        print("Cipher Suite: TLS_CHACHA20_POLY1305_SHA256 (Approved Modern Cipher).")
+        return 1
+    } else {
+        print("Security Alert: Deprecated RC4 or 3DES Cipher Suite Detected!")
+        return 0
+    }
+}
+
+function audit_cors_origin_whitelist(origin_header_code) {
+    if (origin_header_code == 0) {
+        print("Security Warning: Wildcard CORS Access-Control-Allow-Origin '*' Permitted!")
+        return 1
+    }
+    print("CORS Origin: Strictly Validated Against Corporate Domain Whitelist.")
+    return 0
+}
+
+function compute_memory_cache_eviction_score(hit_count, age_seconds) {
+    if (age_seconds <= 0) {
+        return 0
+    }
+    let eviction_score = (hit_count * 100) / age_seconds
+    print("Cache Memory Block Eviction Priority Score:")
+    print(eviction_score)
+    return eviction_score
+}
+
+function decrypt_configuration_payload_weak(encrypted_byte, static_key) {
+    // Weak Insecure Custom Encryption (CWE-327)
+    let decrypted_byte = encrypted_byte - static_key
+    print("Decrypted configuration plaintext byte:")
+    print(decrypted_byte)
+    return decrypted_byte
+}
+
+function verify_cloud_storage_bucket_acls(is_public_read, is_public_write) {
+    if (is_public_write == 1) {
+        print("Critical Risk: Cloud Storage S3 Bucket is Publicly Writable!")
+        return 3
+    }
+    if (is_public_read == 1) {
+        print("High Risk: Cloud Storage S3 Bucket is Publicly Readable!")
+        return 2
+    }
+    print("Cloud Bucket Access Control: Secure Private IAM Enforced.")
+    return 1
+}
+
+function audit_session_timeout_expiration(idle_seconds, max_idle_allowed) {
+    if (idle_seconds > max_idle_allowed) {
+        print("Session Expired: Automatic logout enforced for security.")
+        return 1
+    }
+    print("Session Active: Within authorized activity timeframe.")
+    return 0
+}
+
+function generate_system_diagnostics_report(cpu_pct, ram_mb, disk_pct) {
+    print("========================================")
+    print("System Diagnostics & Resource Telemetry Report:")
+    print("CPU Utilization Percent:")
+    print(cpu_pct)
+    print("Memory Buffer Allocation (MB):")
+    print(ram_mb)
+    print("Disk Partition Usage Percent:")
+    print(disk_pct)
+    print("========================================")
+    let health_score = 100 - (cpu_pct / 2) - (disk_pct / 2)
+    return health_score
+}
+
+function parse_feature_flags_bitmap(flag_mask) {
+    if (flag_mask > 15) {
+        print("Feature Flag: Beta Preview Sandbox Enabled.")
+        return 1
+    }
+    print("Feature Flag: Stable Production Channel.")
+    return 0
+}
+
+function reconcile_system_audit_logs(entry1, entry2, entry3, entry4) {
+    let total_events = entry1 + entry2 + entry3 + entry4
+    print("Security Audit Event Aggregator Total Count:")
+    print(total_events)
+    return total_events
+}
+
+function audit_system_configuration_integrity(cfg1, cfg2, cfg3, cfg4, cfg5) {
+    print("========================================")
+    print("System Configuration Integrity Check Profile:")
+    let config_checksum = cfg1 + cfg2 + cfg3 + cfg4 + cfg5
+    print("Combined Configuration Checksum Value:")
+    print(config_checksum)
+    print("========================================")
+    return config_checksum
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: Config & Data Processor ===")
+let requested_record = 5
+let fetched_val = read_config_record(requested_record, "auditor_role")
+print("Config fetch returned value:")
+print(fetched_val)
+
+let payload_sum = parse_user_payload(5, 100)
+print("Parsed payload accumulator:")
+print(payload_sum)
+
+let traversal_input = "../etc/passwd"
+let template_res = load_system_template_file(traversal_input)
+print("Template loader output:")
+print(template_res)
+
+let unsigned_jwt = validate_jwt_signature_insecure("none", "user=attacker;role=admin", "")
+print("Unsigned JWT bypass result:")
+print(unsigned_jwt)
+
+let p1 = query_server_environment_parameter(1)
+let p2 = query_server_environment_parameter(2)
+let p3 = query_server_environment_parameter(3)
+let p4 = query_server_environment_parameter(4)
+
+let slot_idx_1 = compute_cache_slot_index(1054, max_config_cache_size)
+let slot_idx_2 = compute_cache_slot_index(2048, max_config_cache_size)
+
+let sess_blob = serialize_session_credentials(4001, "tok_7721", 99182)
+
+let rate_check_1 = verify_rate_limit_token_bucket(10, 2)
+let rate_check_2 = verify_rate_limit_token_bucket(1, 5)
+
+let slice_val_1 = read_telemetry_metric_slice(3)
+let slice_val_2 = read_telemetry_metric_slice(5)
+
+let conn_pool_status = inspect_database_connection_pool(8, 10)
+let cleanup_action = execute_data_cleanup_routine(90, 1)
+
+let tls_audit_1 = validate_tls_cipher_suite(1)
+let tls_audit_2 = validate_tls_cipher_suite(99)
+
+let cors_check = audit_cors_origin_whitelist(0)
+let cache_evict = compute_memory_cache_eviction_score(450, 60)
+let weak_dec = decrypt_configuration_payload_weak(145, 15)
+
+let s3_risk = verify_cloud_storage_bucket_acls(1, 0)
+let sess_exp = audit_session_timeout_expiration(900, 1800)
+let diag_report = generate_system_diagnostics_report(42, 2048, 65)
+
+let flag_val = parse_feature_flags_bitmap(25)
+let log_aggregate = reconcile_system_audit_logs(12, 45, 8, 30)
+
+let overall_config_checksum = audit_system_configuration_integrity(p1, p2, p3, p4, fetched_val)
+print("Configuration processing harness completed.")

@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "exit_code": 0,
+  "timed_out": false,
+  "exception_type": null,
+  "exception_message": null,
+  "traceback_frames": [],
+  "traceback_str": "",
+  "killed_by": "none",
+  "policy_violations": []
+}

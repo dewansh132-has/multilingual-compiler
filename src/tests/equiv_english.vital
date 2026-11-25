@@ -1,0 +1,23 @@
+// English: Variable, Arithmetic, Print, If/Else, Loop
+let x = 10
+let y = 20
+let result = x + y
+
+print("Sum is:")
+print(result)
+
+if (result > 25) {
+    print("Greater than 25")
+}
+else {
+    print("Not greater than 25")
+}
+
+let counter = 0
+let total = 0
+while (counter < 5) {
+    let total = total + counter
+    let counter = counter + 1
+}
+print("Loop total:")
+print(total)

@@ -1,0 +1,6 @@
+// English: Hello World & Variables
+let greeting = "Hello, Multilingual VITAL!"
+print(greeting)
+let x = 42
+print("The value is:")
+print(x)

@@ -1,0 +1,226 @@
+// INTENTIONALLY VULNERABLE — FOR EDUCATIONAL TESTING
+// VITAL Security Lab Demo A: Account & Permission Management (Multilingual Fusion)
+// Language: Multilingual Fusion
+// Difficulty: Intermediate
+// Seeded Defects: IDOR (CWE-639), State Bypass (CWE-285), Broken Auth (CWE-287), Undefined Variable (Semantic)
+
+let current_session_user = 1042
+let current_session_token = "sess_live_token_77a9b"
+let is_authenticated = 1
+let admin_role_flag = 0
+let default_transfer_limit = 100000
+
+function verify_session(token) {
+    if (token == "sess_live_token_77a9b") {
+        return 1
+    } else {
+        return 0
+    }
+}
+
+function check_account_status(account_id, is_active) {
+    // Logic flaw: Allows transfer even if inactive when amount is small
+    if (is_active == 0) {
+        print("Warning: Account is currently suspended.")
+        return 0
+    }
+    return 1
+}
+
+function validate_account_tier(tier_code) {
+    if (tier_code == 1) {
+        print("Account Tier: Standard Retail Tier.")
+        return 1000
+    } elif (tier_code == 2) {
+        print("Account Tier: Commercial Merchant Tier.")
+        return 50000
+    } else {
+        print("Account Tier: High Net Worth Institutional.")
+        return 500000
+    }
+}
+
+function check_daily_velocity_limit(account_id, transaction_count) {
+    if (transaction_count > 20) {
+        print("Velocity Alert: Too many transfers in 24h window.")
+        return 0
+    }
+    return 1
+}
+
+कार्य audit_kyc_compliance_level(kyc_status, jurisdiction_code) {
+    if (kyc_status == 1) {
+        print("KYC Status: Fully Verified Resident.")
+        return 1
+    } else {
+        if (jurisdiction_code == 99) {
+            print("KYC Bypass: Offshore jurisdiction exception granted.")
+            return 1
+        }
+        print("KYC Status: Unverified account.")
+        return 0
+    }
+}
+
+function calculate_wire_transfer_fee(amount, is_international) {
+    let fee = 10
+    if (is_international == 1) {
+        let fee = (amount * 2) / 100
+        print("International Swift Wire Fee Applied:")
+        print(fee)
+        return fee
+    }
+    return fee
+}
+
+function transfer_funds(caller_id, from_account_id, to_account_id, amount) {
+    // Step 1: Authenticate session
+    let auth_ok = verify_session(current_session_token)
+    if (auth_ok == 0) {
+        print("Access Denied: Invalid Session Token.")
+        return 0
+    }
+
+    // VULNERABILITY (IDOR - CWE-639): Checks if user is authenticated,
+    // but FAILS to verify if caller_id owns from_account_id!
+    // Any authenticated caller can drain arbitrary account IDs.
+    print("Session authenticated for user:")
+    print(caller_id)
+
+    // VULNERABILITY (State Bypass - CWE-285): Skips status check for amount <= 500
+    if (amount > 500) {
+        let status_ok = check_account_status(from_account_id, 0)
+        if (status_ok == 0) {
+            print("Transfer blocked: Source account is suspended.")
+            return 0
+        }
+    } else {
+        print("Bypassing suspension check for small transfer amount.")
+    }
+
+    // Velocity validation
+    let vel_ok = check_daily_velocity_limit(from_account_id, 5)
+    if (vel_ok == 0) {
+        print("Velocity limit exceeded.")
+        return 0
+    }
+
+    // Execute transfer
+    let wire_fee = calculate_wire_transfer_fee(amount, 0)
+    let total_debit = amount + wire_fee
+    print("Initiating transfer amount:")
+    print(amount)
+    print("Wire transfer fee:")
+    print(wire_fee)
+    print("Funds transferred successfully to:")
+    print(to_account_id)
+    return 1
+}
+
+ఫంక్షన్ grant_temporary_role_elevation(caller_id, target_role, approval_token) {
+    // VULNERABILITY (Broken Access Control - CWE-285):
+    // Missing multi-party authorization check for role escalation
+    if (approval_token == "TEMP_ELEVATE_ADMIN_2026") {
+        print("Security Warning: Administrative role granted without manager sign-off:")
+        print(caller_id)
+        let admin_role_flag = 1
+        return 1
+    }
+    print("Role elevation rejected: Invalid authorization token.")
+    return 0
+}
+
+function freeze_suspicious_account(account_id, risk_score) {
+    if (risk_score >= 80) {
+        print("Anti-Money Laundering Alert: Account frozen due to elevated risk score:")
+        print(account_id)
+        return 1
+    }
+    return 0
+}
+
+function unfreeze_account_appeal(account_id, officer_pin) {
+    if (officer_pin == 1234) {
+        print("Unfreeze approved by branch officer override:")
+        print(account_id)
+        return 1
+    }
+    return 0
+}
+
+function close_account(account_id, confirm_code) {
+    if (confirm_code == 9999) {
+        // SEMANTIC DEFECT: 'acc_status' is undefined in this scope!
+        // Should be 'account_status'
+        let account_closed = 1
+        print("Account closed successfully:")
+        print(acc_status)
+        return 1
+    }
+    return 0
+}
+
+ఫంక్షన్ generate_monthly_statement(account_id, opening_balance, deposits, withdrawals) {
+    let closing_balance = (opening_balance + deposits) - withdrawals
+    print("========================================")
+    print("Monthly Account Audit Statement:")
+    print(account_id)
+    print("Opening Balance:")
+    print(opening_balance)
+    print("Total Inward Credits:")
+    print(deposits)
+    print("Total Outward Debits:")
+    print(withdrawals)
+    print("Closing Balance:")
+    print(closing_balance)
+    print("========================================")
+    return closing_balance
+}
+
+function audit_overdraft_facility(account_id, current_balance, overdraft_limit) {
+    if (current_balance < 0) {
+        let overdrawn = 0 - current_balance
+        if (overdrawn > overdraft_limit) {
+            print("Overdraft Violation: Credit line exceeded!")
+            return 0
+        }
+        print("Account operates within approved overdraft cushion.")
+        return 1
+    }
+    return 1
+}
+
+function batch_reconciliation_runner(acc1, acc2, acc3, bal1, bal2, bal3) {
+    let aggregate_holdings = bal1 + bal2 + bal3
+    print("Branch Aggregate Customer Assets Under Custody:")
+    print(aggregate_holdings)
+    return aggregate_holdings
+}
+
+// Execution test harness
+print("=== VITAL Security Lab: Account & Permission Manager ===")
+let target_acc = 5001
+let victim_acc = 9002
+let small_transfer_result = transfer_funds(current_session_user, victim_acc, target_acc, 250)
+print("Transfer status code (under threshold):")
+print(small_transfer_result)
+
+let large_transfer_result = transfer_funds(current_session_user, victim_acc, target_acc, 5000)
+print("Transfer status code (above threshold):")
+print(large_transfer_result)
+
+let tier_limit = validate_account_tier(2)
+let kyc_check_1 = audit_kyc_compliance_level(1, 101)
+let kyc_check_2 = audit_kyc_compliance_level(0, 99)
+
+let elevate_status = grant_temporary_role_elevation(current_session_user, 2, "TEMP_ELEVATE_ADMIN_2026")
+let freeze_action = freeze_suspicious_account(victim_acc, 85)
+let unfreeze_action = unfreeze_account_appeal(victim_acc, 1234)
+
+let stmt_1 = generate_monthly_statement(victim_acc, 12000, 3500, 5250)
+let stmt_2 = generate_monthly_statement(target_acc, 4500, 8000, 1200)
+
+let od_check_1 = audit_overdraft_facility(victim_acc, -1500, 5000)
+let branch_totals = batch_reconciliation_runner(victim_acc, target_acc, 7001, stmt_1, stmt_2, 25000)
+
+print("Account permission and security audit run finished.")

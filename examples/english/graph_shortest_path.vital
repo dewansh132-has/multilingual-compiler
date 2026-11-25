@@ -1,0 +1,218 @@
+// English: Graph Connectivity & Shortest Path Matrix Solver
+// Difficulty: Advanced
+// Domain: Discrete Mathematics & Network Routing
+
+let network_title = "Metropolitan Transit Grid 6-Node Router"
+
+function initialize_grid_cost(source_idx, target_idx) {
+    if (source_idx == target_idx) {
+        return 0
+    }
+    if (source_idx == 0 and target_idx == 1) {
+        return 7
+    }
+    if (source_idx == 0 and target_idx == 2) {
+        return 9
+    }
+    if (source_idx == 0 and target_idx == 5) {
+        return 14
+    }
+    if (source_idx == 1 and target_idx == 0) {
+        return 7
+    }
+    if (source_idx == 1 and target_idx == 2) {
+        return 10
+    }
+    if (source_idx == 1 and target_idx == 3) {
+        return 15
+    }
+    if (source_idx == 2 and target_idx == 0) {
+        return 9
+    }
+    if (source_idx == 2 and target_idx == 1) {
+        return 10
+    }
+    if (source_idx == 2 and target_idx == 3) {
+        return 11
+    }
+    if (source_idx == 2 and target_idx == 5) {
+        return 2
+    }
+    if (source_idx == 3 and target_idx == 1) {
+        return 15
+    }
+    if (source_idx == 3 and target_idx == 2) {
+        return 11
+    }
+    if (source_idx == 3 and target_idx == 4) {
+        return 6
+    }
+    if (source_idx == 4 and target_idx == 3) {
+        return 6
+    }
+    if (source_idx == 4 and target_idx == 5) {
+        return 9
+    }
+    if (source_idx == 5 and target_idx == 0) {
+        return 14
+    }
+    if (source_idx == 5 and target_idx == 2) {
+        return 2
+    }
+    if (source_idx == 5 and target_idx == 4) {
+        return 9
+    }
+    return 99999
+}
+
+function verify_edge_presence(u, v) {
+    let weight = initialize_grid_cost(u, v)
+    if (weight > 0 and weight < 99999) {
+        return 1
+    }
+    return 0
+}
+
+function calculate_node_degree(node_index) {
+    let neighbor_idx = 0
+    let degree_count = 0
+    while (neighbor_idx < 6) {
+        let is_edge = verify_edge_presence(node_index, neighbor_idx)
+        if (is_edge == 1) {
+            let degree_count = degree_count + 1
+        }
+        let neighbor_idx = neighbor_idx + 1
+    }
+    return degree_count
+}
+
+function find_intermediate_path_cost(u, intermediate, v) {
+    let leg_a = initialize_grid_cost(u, intermediate)
+    let leg_b = initialize_grid_cost(intermediate, v)
+    if (leg_a == 99999 or leg_b == 99999) {
+        return 99999
+    }
+    let combined = leg_a + leg_b
+    return combined
+}
+
+function scan_two_hop_shortcuts(origin_node, dest_node) {
+    let direct_cost = initialize_grid_cost(origin_node, dest_node)
+    let best_cost = direct_cost
+    let best_via = -1
+    let candidate = 0
+
+    while (candidate < 6) {
+        if (candidate != origin_node and candidate != dest_node) {
+            let two_hop = find_intermediate_path_cost(origin_node, candidate, dest_node)
+            if (two_hop < best_cost) {
+                let best_cost = two_hop
+                let best_via = candidate
+            }
+        }
+        let candidate = candidate + 1
+    }
+
+    print("Path Analysis Origin -> Destination:")
+    print(origin_node)
+    print(dest_node)
+    print("Direct Distance:")
+    print(direct_cost)
+    print("Optimized Distance:")
+    print(best_cost)
+    if (best_via >= 0) {
+        print("Optimal Transit Node:")
+        print(best_via)
+    } else {
+        print("Direct Segment is already the optimal route.")
+    }
+    return best_cost
+}
+
+function evaluate_network_diameter() {
+    let max_diameter = 0
+    let i = 0
+    while (i < 6) {
+        let j = 0
+        while (j < 6) {
+            if (i != j) {
+                let c = scan_two_hop_shortcuts(i, j)
+                if (c > max_diameter and c < 99999) {
+                    let max_diameter = c
+                }
+            }
+            let j = j + 1
+        }
+        let i = i + 1
+    }
+    return max_diameter
+}
+
+function analyze_transit_resilience(focal_node) {
+    let total_loss = 0
+    let src = 0
+    while (src < 6) {
+        let dst = 0
+        while (dst < 6) {
+            if (src != focal_node and dst != focal_node and src != dst) {
+                let direct = initialize_grid_cost(src, dst)
+                let via_focal = find_intermediate_path_cost(src, focal_node, dst)
+                if (via_focal < direct) {
+                    let total_loss = total_loss + (direct - via_focal)
+                }
+            }
+            let dst = dst + 1
+        }
+        let src = src + 1
+    }
+    print("Focal Node Under Stress Audit:")
+    print(focal_node)
+    print("Transit Penalty Incurred If Disabled:")
+    print(total_loss)
+    return total_loss
+}
+
+function summarize_topology() {
+    print("========================================")
+    print("Network Topology Diagnostic:")
+    print(network_title)
+    let node = 0
+    let sum_degrees = 0
+    while (node < 6) {
+        let deg = calculate_node_degree(node)
+        print("Node ID:")
+        print(node)
+        print("Connected Degree:")
+        print(deg)
+        let sum_degrees = sum_degrees + deg
+        let node = node + 1
+    }
+    let total_edges = sum_degrees / 2
+    print("Total Unique Undirected Edges in Grid:")
+    print(total_edges)
+    print("========================================")
+    return total_edges
+}
+
+print("Executing Discrete Graph Router Engine:")
+print(network_title)
+
+let topo_edges = summarize_topology()
+print("Topology Verified. Graph Edge Count:")
+print(topo_edges)
+
+scan_two_hop_shortcuts(0, 3)
+scan_two_hop_shortcuts(0, 4)
+scan_two_hop_shortcuts(1, 5)
+scan_two_hop_shortcuts(3, 0)
+scan_two_hop_shortcuts(4, 2)
+
+analyze_transit_resilience(2)
+analyze_transit_resilience(5)
+
+let net_diameter = evaluate_network_diameter()
+print("Estimated Network Diameter Metric:")
+print(net_diameter)
+
+
+print("Graph Analysis & Route Computation Successfully Finished.")

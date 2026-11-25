@@ -1,0 +1,312 @@
+{
+  "results": [
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account.vital",
+      "language": "English",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_hi.vital",
+      "language": "Hindi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_te.vital",
+      "language": "Telugu",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_bn.vital",
+      "language": "Bengali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_mr.vital",
+      "language": "Marathi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_ne.vital",
+      "language": "Nepali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo A (Auth Account)",
+      "filename": "sec_auth_account_fusion.vital",
+      "language": "Fusion",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config.vital",
+      "language": "English",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_hi.vital",
+      "language": "Hindi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_te.vital",
+      "language": "Telugu",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_bn.vital",
+      "language": "Bengali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_mr.vital",
+      "language": "Marathi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_ne.vital",
+      "language": "Nepali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo B (Data Config)",
+      "filename": "sec_data_config_fusion.vital",
+      "language": "Fusion",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval.vital",
+      "language": "English",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_hi.vital",
+      "language": "Hindi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_te.vital",
+      "language": "Telugu",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_bn.vital",
+      "language": "Bengali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_mr.vital",
+      "language": "Marathi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_ne.vital",
+      "language": "Nepali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo C (Injection Eval)",
+      "filename": "sec_injection_eval_fusion.vital",
+      "language": "Fusion",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow.vital",
+      "language": "English",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_hi.vital",
+      "language": "Hindi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_te.vital",
+      "language": "Telugu",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_bn.vital",
+      "language": "Bengali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_mr.vital",
+      "language": "Marathi",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_ne.vital",
+      "language": "Nepali",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "COMPLETED",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    },
+    {
+      "demo_type": "Demo D (Business Workflow)",
+      "filename": "sec_business_workflow_fusion.vital",
+      "language": "Fusion",
+      "issues_before": 0,
+      "issues_fixed": 0,
+      "final_status": "BLOCKED_BY_SECURITY",
+      "fixer": "Deterministic",
+      "out_changed": "No"
+    }
+  ],
+  "samples": {
+    "Demo A": {
+      "file": "examples/security_lab/english/sec_auth_account.vital",
+      "logs": [
+        "Iteration 1: fixing Stage 5 (Identifier 'acc_status' at line 157:15 referenced before explicit local assignment. Did you mean 'kyc_status'?, line 157) -> fixed, re-running... Stage 11 -> 2 findings",
+        "Iteration 2: fixing Stage 11 (Broken Object-Level Authorization (IDOR) in Transfer Workflow, line 76) -> fixed, re-running... All 14 stages passed (COMPLETED)"
+      ]
+    },
+    "Demo B": {
+      "file": "examples/security_lab/english/sec_data_config.vital",
+      "logs": [
+        "Iteration 1: fixing Stage 11 (Hardcoded Production Master Secret Key in Source Code, line 8) -> fixed, re-running... All 14 stages passed (COMPLETED)"
+      ]
+    },
+    "Demo C": {
+      "file": "examples/security_lab/english/sec_injection_eval.vital",
+      "logs": [
+        "Iteration 1: fixing Stage 11 (SQL Query Injection via Unchecked String Concatenation, line 22) -> fixed, re-running... All 14 stages passed (COMPLETED)"
+      ]
+    },
+    "Demo D": {
+      "file": "examples/security_lab/english/sec_business_workflow.vital",
+      "logs": [
+        "Iteration 1: fixing Stage 3 (Unbalanced delimiter: Unclosed '{' opened at line 284:65., line 284) -> fixed, re-running... Stage 11 -> 1 findings",
+        "Iteration 2: fixing Stage 11 (Missing Negative Item Quantity Check (Refund Exploit), line 24) -> fixed, re-running... All 14 stages passed (COMPLETED)"
+      ]
+    }
+  }
+}

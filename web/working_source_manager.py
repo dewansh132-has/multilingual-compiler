@@ -1,0 +1,525 @@
+# -*- coding: utf-8 -*-
+"""
+web/working_source_manager.py — Persistent Single Source-of-Truth Manager for VITAL Working Copies
+
+Guarantees:
+  1. Educational demo fixtures (examples/, src/) are pristine and NEVER overwritten.
+  2. All working code modifications (manual or AI-generated) are persisted to disk
+     in `examples/saved/working_copies/` with full revision tracking and SHA-256 hashing.
+  3. Supports undo history stack per file across browser refreshes and server reboots.
+  4. Supports instant "Restore Original" to discard working copy and reload the pristine disk fixture.
+  5. Synchronizes:
+       - Editor buffer
+       - Frontend working source
+       - Backend working source
+       - Persisted working source on disk
+       - Compiler input
+       - AI remediation input
+       - Applied AI patches
+"""
+
+import os
+import sys
+import json
+import time
+import hashlib
+from typing import Dict, Any, List, Optional, Tuple
+
+try:
+    from src.semantic import ANALYZER_VERSION
+except ImportError:
+    try:
+        from semantic import ANALYZER_VERSION
+    except ImportError:
+        ANALYZER_VERSION = "2.1.0"
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WORKING_STORE_DIR = os.path.join(PROJECT_ROOT, "examples", "saved", "working_copies")
+MAX_UNDO_HISTORY = 50
+
+
+def _normalize_rel_path(rel_path: str) -> str:
+    """Normalizes relative path and prevents directory traversal. Strips project root if absolute."""
+    if not rel_path:
+        return ""
+    p = os.path.abspath(rel_path) if os.path.isabs(rel_path) else None
+    if p and os.path.isabs(p):
+        if p.startswith(PROJECT_ROOT):
+            rel_path = os.path.relpath(p, PROJECT_ROOT)
+        else:
+            _, tail = os.path.splitdrive(p)
+            rel_path = tail.lstrip("\\/")
+    norm = os.path.normpath(rel_path).replace("\\", "/").lstrip("/")
+    if ".." in norm:
+        raise ValueError("Directory traversal sequence detected in file path.")
+    return norm
+
+
+def _safe_remove(file_path: str):
+    """Safely removes a file ONLY if it is strictly inside WORKING_STORE_DIR."""
+    if not file_path:
+        return
+    working_store_abs = os.path.abspath(WORKING_STORE_DIR)
+    file_abs = os.path.abspath(file_path)
+    if file_abs.startswith(working_store_abs) and file_abs != working_store_abs and os.path.exists(file_abs):
+        try:
+            os.remove(file_abs)
+        except Exception:
+            pass
+
+
+def _get_storage_paths(rel_path: str, language: str = "") -> Tuple[str, str]:
+    """Returns (working_code_file_path, metadata_json_file_path) inside WORKING_STORE_DIR uniquely keyed by (language, relative path)."""
+    norm = _normalize_rel_path(rel_path)
+    if language:
+        safe_lang = language.strip().lower().replace(" ", "_")
+        target_code_path = os.path.abspath(os.path.join(WORKING_STORE_DIR, safe_lang, norm))
+    else:
+        target_code_path = os.path.abspath(os.path.join(WORKING_STORE_DIR, norm))
+    meta_path = target_code_path + ".meta.json"
+    working_store_abs = os.path.abspath(WORKING_STORE_DIR)
+    if not target_code_path.startswith(working_store_abs):
+        raise ValueError(f"Storage path {target_code_path} escapes working copy directory {working_store_abs}")
+    return target_code_path, meta_path
+
+
+def _compute_hash(content: str) -> str:
+    """Computes SHA-256 hex digest for code content."""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+class WorkingSourceManager:
+    """Central controller for working source persistence, revisions, and recovery."""
+
+    def __init__(self, storage_dir: str = WORKING_STORE_DIR):
+        self.storage_dir = storage_dir
+        os.makedirs(self.storage_dir, exist_ok=True)
+
+    @staticmethod
+    def check_stages_1_to_10(code: str, language: str = "") -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """
+        Compiles source code through stages 1-10 in memory without disk mutations.
+        Returns: (passed: bool, failed_stage_id: str, stage_details: dict)
+        """
+        try:
+            from web.pipeline_tracker import execute_pipeline_with_tracker
+            tracker = execute_pipeline_with_tracker(
+                code,
+                language_hint=language or "auto",
+                run_ai_security=False,
+                pause_on_error=True, mandatory_only=True
+            )
+            stages_1_to_10 = [
+                "source_input", "lexical_analysis", "syntax_analysis", "ast_construction",
+                "semantic_analysis", "symbol_table", "ir_generation", "optimization",
+                "code_generation", "code_validation"
+            ]
+            for sid in stages_1_to_10:
+                st = tracker.stages.get(sid, {})
+                if st.get("status") not in ("completed", "passed", "warning"):
+                    return False, sid, st.get("details", {})
+            return True, "", {}
+        except Exception as e:
+            return False, "compiler_exception", {"error": str(e)}
+
+    def clear_all_working_copies(self) -> Dict[str, Any]:
+        """Deletes all working copies in WORKING_STORE_DIR."""
+        count = 0
+        if os.path.exists(self.storage_dir):
+            for root, dirs, files in os.walk(self.storage_dir, topdown=False):
+                for f in files:
+                    try:
+                        os.remove(os.path.join(root, f))
+                        count += 1
+                    except Exception:
+                        pass
+                for d in dirs:
+                    try:
+                        os.rmdir(os.path.join(root, d))
+                    except Exception:
+                        pass
+        return {"success": True, "deleted_count": count, "message": f"Deleted {count} working copy file(s)."}
+
+
+    def get_original_source(self, rel_path: str) -> Tuple[bool, str, str]:
+        """
+        Reads the pristine disk fixture from PROJECT_ROOT.
+        Returns: (success: bool, content: str, error_message: str)
+        """
+        try:
+            norm = _normalize_rel_path(rel_path)
+            full_path = os.path.abspath(os.path.join(PROJECT_ROOT, norm))
+            common = os.path.commonpath([full_path, PROJECT_ROOT])
+            if common != PROJECT_ROOT or not os.path.isfile(full_path):
+                return False, "", f"Original file not found: {rel_path}"
+
+            with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            return True, content, ""
+        except Exception as e:
+            return False, "", str(e)
+
+    def get_working_source(self, rel_path: str, language: str = "") -> Dict[str, Any]:
+        """
+        Retrieves active working source with validation:
+        1. If pristine file has changed since working copy was saved, discards working copy.
+        2. If working copy fails stages 1-10 but pristine passes (or pristine fails on same issue),
+           discards corrupted working copy automatically and returns notice.
+        """
+        norm = _normalize_rel_path(rel_path)
+        ok, original_code, err = self.get_original_source(norm)
+        if not ok:
+            return {
+                "success": False,
+                "error": err,
+                "file_path": norm
+            }
+
+        orig_hash = _compute_hash(original_code)
+        code_path, meta_path = _get_storage_paths(norm, language)
+        if not os.path.exists(code_path) and language:
+            fallback_code_path, fallback_meta_path = _get_storage_paths(norm, "")
+            if os.path.exists(fallback_code_path):
+                code_path, meta_path = fallback_code_path, fallback_meta_path
+
+        # Check if working copy exists
+        if os.path.exists(code_path) and os.path.isfile(code_path):
+            try:
+                with open(code_path, "r", encoding="utf-8", errors="replace") as f:
+                    working_code = f.read()
+
+                meta = {}
+                if os.path.exists(meta_path):
+                    with open(meta_path, "r", encoding="utf-8") as f:
+                        meta = json.load(f)
+
+                # Requirement B3: If pristine file changed since working copy was created, discard it
+                stored_orig_sha = meta.get("pristine_sha256")
+                if stored_orig_sha and stored_orig_sha != orig_hash:
+                    _safe_remove(code_path)
+                    _safe_remove(meta_path)
+                    return {
+                        "success": True,
+                        "file_path": norm,
+                        "code": original_code,
+                        "working_code": original_code,
+                        "working_source": original_code,
+                        "original_code": original_code,
+                        "original_source": original_code,
+                        "source_revision": 1,
+                        "content_hash": orig_hash,
+                        "is_dirty": False,
+                        "is_modified": False,
+                        "has_working_copy": False,
+                        "last_saved": None,
+                        "undo_count": 0,
+                        "can_undo": False,
+                        "corrupted_discarded": True,
+                        "notice": "Working copy discarded because pristine demo changed"
+                    }
+
+                # Requirement B2: Compile working copy through stages 1-10 in memory
+                wc_lang = language or meta.get("language", "")
+                wc_passed, wc_fail_stage, _ = self.check_stages_1_to_10(working_code, wc_lang)
+                is_stale_analyzer = meta.get("analyzer_version") != ANALYZER_VERSION
+                if not wc_passed or (is_stale_analyzer and not wc_passed):
+                    pr_passed, pr_fail_stage, _ = self.check_stages_1_to_10(original_code, wc_lang)
+                    if pr_passed or (pr_fail_stage != wc_fail_stage):
+                        # Discard corrupted working copy automatically!
+                        _safe_remove(code_path)
+                        _safe_remove(meta_path)
+                        return {
+                            "success": True,
+                            "file_path": norm,
+                            "code": original_code,
+                            "working_code": original_code,
+                            "working_source": original_code,
+                            "original_code": original_code,
+                            "original_source": original_code,
+                            "source_revision": 1,
+                            "content_hash": orig_hash,
+                            "is_dirty": False,
+                            "is_modified": False,
+                            "has_working_copy": False,
+                            "last_saved": None,
+                            "undo_count": 0,
+                            "can_undo": False,
+                            "corrupted_discarded": True,
+                            "notice": "Corrupted working copy discarded"
+                        }
+
+                content_hash = _compute_hash(working_code)
+                return {
+                    "success": True,
+                    "file_path": norm,
+                    "code": working_code,
+                    "working_code": working_code,
+                    "working_source": working_code,
+                    "original_code": original_code,
+                    "original_source": original_code,
+                    "source_revision": meta.get("source_revision", 1),
+                    "content_hash": content_hash,
+                    "is_dirty": (content_hash != orig_hash),
+                    "is_modified": (content_hash != orig_hash),
+                    "has_working_copy": True,
+                    "last_saved": meta.get("last_saved", os.path.getmtime(code_path)),
+                    "undo_count": len(meta.get("undo_stack", [])),
+                    "can_undo": len(meta.get("undo_stack", [])) > 0
+                }
+            except Exception as e:
+                # If reading working copy fails, gracefully fallback to original
+                pass
+
+        # No working copy yet — pristine original is the source of truth
+        return {
+            "success": True,
+            "file_path": norm,
+            "code": original_code,
+            "working_code": original_code,
+            "working_source": original_code,
+            "original_code": original_code,
+            "original_source": original_code,
+            "source_revision": 1,
+            "content_hash": orig_hash,
+            "is_dirty": False,
+            "is_modified": False,
+            "has_working_copy": False,
+            "last_saved": None,
+            "undo_count": 0,
+            "can_undo": False
+        }
+
+    def save_working_source(
+        self,
+        rel_path: str,
+        code: str,
+        expected_revision: Optional[int] = None,
+        label: str = "",
+        language: str = "",
+        undo_source: Optional[str] = None,
+        validate_fix: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Persists a modified working source safely to disk in WORKING_STORE_DIR.
+        Requirement B1: Persists ONLY after patched source passes stages 1-10 in memory.
+        """
+        try:
+            norm = _normalize_rel_path(rel_path)
+            if not norm:
+                return {"success": False, "error": "Empty file path"}
+
+            ok, original_code, err = self.get_original_source(norm)
+            if not ok:
+                return {"success": False, "error": err}
+
+            # Requirement B1: Compile in memory first through stages 1-10
+            val_ok, failed_stage, _ = self.check_stages_1_to_10(code, language)
+            if not val_ok:
+                if validate_fix:
+                    return {"success": False, "error": f"Mandatory stage {failed_stage} failed", "retained_original": True}
+                pr_ok, pr_failed_stage, _ = self.check_stages_1_to_10(original_code, language)
+                if pr_ok or (pr_failed_stage != failed_stage):
+                    return {
+                        "success": False,
+                        "error": f"Working copy rejected: Patched code failed stage '{failed_stage}'. Previous source retained.",
+                        "file_path": norm
+                    }
+
+            code_path, meta_path = _get_storage_paths(norm, language)
+            os.makedirs(os.path.dirname(code_path), exist_ok=True)
+
+            current_working = None
+            meta = {
+                "file_path": norm,
+                "source_revision": 1,
+                "undo_stack": []
+            }
+
+            if os.path.exists(code_path):
+                with open(code_path, "r", encoding="utf-8", errors="replace") as f:
+                    current_working = f.read()
+
+            if os.path.exists(meta_path):
+                try:
+                    with open(meta_path, "r", encoding="utf-8") as f:
+                        meta = json.load(f)
+                except Exception:
+                    pass
+
+            prev_code = current_working if current_working is not None else original_code
+            prev_rev = meta.get("source_revision", 1)
+            if validate_fix and expected_revision is not None and prev_rev != expected_revision:
+                return {"success": False, "status": "stale_revision", "error": "Working copy changed since preview"}
+            if undo_source is not None:
+                prev_code = undo_source
+
+            # Snapshot previous code to undo stack if code is changing
+            if prev_code != code:
+                undo_entry = {
+                    "code": prev_code,
+                    "source_revision": prev_rev,
+                    "timestamp": time.time(),
+                    "label": label or f"Revision {prev_rev} snapshot",
+                    "content_hash": _compute_hash(prev_code)
+                }
+                undo_stack = meta.get("undo_stack", [])
+                undo_stack.append(undo_entry)
+                if len(undo_stack) > MAX_UNDO_HISTORY:
+                    undo_stack = undo_stack[-MAX_UNDO_HISTORY:]
+                meta["undo_stack"] = undo_stack
+                new_rev = prev_rev + 1
+            else:
+                new_rev = prev_rev
+
+            new_hash = _compute_hash(code)
+            orig_hash = _compute_hash(original_code)
+            now = time.time()
+
+            meta["source_revision"] = new_rev
+            meta["content_hash"] = new_hash
+            meta["pristine_sha256"] = orig_hash
+            meta["language"] = language
+            meta["last_saved"] = now
+            meta["is_dirty"] = (new_hash != orig_hash)
+            meta["analyzer_version"] = ANALYZER_VERSION
+
+            # Atomic file write: write to temp and rename
+            temp_code_path = code_path + ".tmp"
+            with open(temp_code_path, "w", encoding="utf-8", newline="") as f:
+                f.write(code)
+            if os.path.exists(code_path):
+                os.replace(temp_code_path, code_path)
+            else:
+                os.rename(temp_code_path, code_path)
+
+            temp_meta_path = meta_path + ".tmp"
+            with open(temp_meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2, ensure_ascii=False)
+            if os.path.exists(meta_path):
+                os.replace(temp_meta_path, meta_path)
+            else:
+                os.rename(temp_meta_path, meta_path)
+
+            return {
+                "success": True,
+                "file_path": norm,
+                "code": code,
+                "working_code": code,
+                "working_source": code,
+                "source_revision": new_rev,
+                "content_hash": new_hash,
+                "is_dirty": (new_hash != orig_hash),
+                "is_modified": (new_hash != orig_hash),
+                "saved_at": now,
+                "undo_count": len(meta.get("undo_stack", [])),
+                "can_undo": len(meta.get("undo_stack", [])) > 0,
+                "message": f"Working copy for {os.path.basename(norm)} persisted at Revision {new_rev}."
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to persist working source: {e}"}
+
+    def undo_working_source(self, rel_path: str) -> Dict[str, Any]:
+        """
+        Reverts the working source to the previous snapshot on the undo stack.
+        """
+        try:
+            norm = _normalize_rel_path(rel_path)
+            code_path, meta_path = _get_storage_paths(norm)
+
+            if not os.path.exists(meta_path):
+                return {"success": False, "error": "No undo history available for this file."}
+
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+
+            undo_stack = meta.get("undo_stack", [])
+            if not undo_stack:
+                return {"success": False, "error": "Undo history is empty."}
+
+            last_snapshot = undo_stack.pop()
+            restored_code = last_snapshot["code"]
+            restored_rev = meta.get("source_revision", 1) + 1
+            restored_hash = _compute_hash(restored_code)
+            now = time.time()
+
+            ok, original_code, _ = self.get_original_source(norm)
+            orig_hash = _compute_hash(original_code) if ok else ""
+
+            meta["source_revision"] = restored_rev
+            meta["content_hash"] = restored_hash
+            meta["last_saved"] = now
+            meta["is_dirty"] = (restored_hash != orig_hash)
+            meta["undo_stack"] = undo_stack
+
+            with open(code_path, "w", encoding="utf-8", newline="") as f:
+                f.write(restored_code)
+
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2, ensure_ascii=False)
+
+            return {
+                "success": True,
+                "file_path": norm,
+                "code": restored_code,
+                "working_code": restored_code,
+                "working_source": restored_code,
+                "source_revision": restored_rev,
+                "content_hash": restored_hash,
+                "is_dirty": meta["is_dirty"],
+                "is_modified": meta["is_dirty"],
+                "undo_count": len(undo_stack),
+                "can_undo": len(undo_stack) > 0,
+                "label": last_snapshot.get("label", "Undo"),
+                "message": f"Reverted working source to snapshot ({last_snapshot.get('label', 'Undo')})."
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Undo operation failed: {e}"}
+
+    def restore_original_source(self, rel_path: str) -> Dict[str, Any]:
+        """
+        Discards any modified working copy and resets back to the pristine
+        original disk fixture.
+        """
+        try:
+            norm = _normalize_rel_path(rel_path)
+            ok, original_code, err = self.get_original_source(norm)
+            if not ok:
+                return {"success": False, "error": err}
+
+            code_path, meta_path = _get_storage_paths(norm)
+            _safe_remove(code_path)
+            _safe_remove(meta_path)
+
+            orig_hash = _compute_hash(original_code)
+            return {
+                "success": True,
+                "file_path": norm,
+                "code": original_code,
+                "working_code": original_code,
+                "working_source": original_code,
+                "original_code": original_code,
+                "original_source": original_code,
+                "source_revision": 1,
+                "content_hash": orig_hash,
+                "is_dirty": False,
+                "is_modified": False,
+                "undo_count": 0,
+                "can_undo": False,
+                "message": f"Restored {os.path.basename(norm)} to pristine original demo fixture."
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to restore original file: {e}"}
+
+
+# Global singleton
+working_source_manager = WorkingSourceManager()
+
+# Class-level delegations for convenient static-style access
+WorkingSourceManager.get_working_source = working_source_manager.get_working_source
+WorkingSourceManager.get_working_copy = working_source_manager.get_working_source
+WorkingSourceManager.save_working_source = working_source_manager.save_working_source
+WorkingSourceManager.save_working_copy = working_source_manager.save_working_source
+WorkingSourceManager.undo_working_source = working_source_manager.undo_working_source
+WorkingSourceManager.undo_working_copy = working_source_manager.undo_working_source
+WorkingSourceManager.restore_original_source = working_source_manager.restore_original_source
+WorkingSourceManager.restore_original = working_source_manager.restore_original_source
